@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 6%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(0 0% 12%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(0 0% 6%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(0 79% 63%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(0 0% 18%);
+  --secondary-foreground: hsl(0 0% 90%);
+  --muted: hsl(0 0% 25%);
+  --muted-foreground: hsl(0 0% 55%);
+  --accent: hsl(204 100% 60%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(356 90% 54%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 18%);
+  --input: hsl(0 0% 18%);
+  --ring: hsl(0 79% 63%);
+  --chart-1: hsl(0 79% 63%);
+  --chart-2: hsl(204 100% 60%);
+  --chart-3: hsl(42 93% 56%);
+  --chart-4: hsl(147 78% 42%);
+  --chart-5: hsl(341 75% 51%);
+  --sidebar: hsl(0 0% 12%);
+  --sidebar-foreground: hsl(0 0% 98%);
+  --sidebar-primary: hsl(0 79% 63%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(0 0% 18%);
+  --sidebar-accent-foreground: hsl(204 100% 60%);
+  --sidebar-border: hsl(0 0% 18%);
+  --sidebar-ring: hsl(0 79% 63%);
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'Fira Code', monospace;
+  --radius: 8px;
+}
+
+.dark {
+  --background: hsl(0 0% 3%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(0 0% 8%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(0 0% 3%);
+  --popover-foreground: hsl(0 0% 98%);
+  --primary: hsl(0 79% 63%);
+  --primary-foreground: hsl(0 0% 98%);
+  --secondary: hsl(0 0% 15%);
+  --secondary-foreground: hsl(0 0% 90%);
+  --muted: hsl(0 0% 20%);
+  --muted-foreground: hsl(0 0% 60%);
+  --accent: hsl(204 100% 60%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(356 90% 54%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 15%);
+  --input: hsl(0 0% 15%);
+  --ring: hsl(0 79% 63%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .video-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .video-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  }
+  
+  .creator-avatar {
+    transition: transform 0.2s ease;
+  }
+  .creator-avatar:hover {
+    transform: scale(1.1);
+  }
+}
