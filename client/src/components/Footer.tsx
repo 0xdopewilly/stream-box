@@ -32,7 +32,7 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Platform</h4>
             <ul className="space-y-3 text-muted-foreground">
               <li><Link href="/about" className="hover:text-foreground transition-colors" data-testid="footer-how-it-works">How it Works</Link></li>
-              <li><a href="#pricing" className="hover:text-foreground transition-colors" data-testid="footer-pricing">Pricing</a></li>
+              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-pricing">Pricing</a></li>
               <li><Link href="/creators" className="hover:text-foreground transition-colors" data-testid="footer-creator-resources">Creator Resources</Link></li>
               <li><a href="https://docs.streambox.com" className="hover:text-foreground transition-colors" data-testid="footer-api-docs">API Documentation</a></li>
             </ul>
@@ -42,9 +42,9 @@ export function Footer() {
             <h4 className="font-semibold mb-4">Technology</h4>
             <ul className="space-y-3 text-muted-foreground">
               <li><a href="https://filecoin.io/storage" className="hover:text-foreground transition-colors" data-testid="footer-filecoin-storage">Filecoin Storage</a></li>
-              <li><a href="#verification" className="hover:text-foreground transition-colors" data-testid="footer-content-verification">Content Verification</a></li>
+              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-content-verification">Content Verification</a></li>
               <li><a href="https://docs.filcdn.network" className="hover:text-foreground transition-colors" data-testid="footer-filcdn">FilCDN</a></li>
-              <li><a href="#security" className="hover:text-foreground transition-colors" data-testid="footer-security">Security</a></li>
+              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-security">Security</a></li>
             </ul>
           </div>
           

@@ -1,5 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { VideoCard } from "@/components/VideoCard";
@@ -95,9 +96,11 @@ export default function VideoPage() {
   };
 
   // Increment views when video loads
-  if (video && !incrementViewsMutation.isSuccess) {
-    incrementViewsMutation.mutate();
-  }
+  useEffect(() => {
+    if (video && !incrementViewsMutation.isSuccess && !incrementViewsMutation.isPending) {
+      incrementViewsMutation.mutate();
+    }
+  }, [video?.id]); // Only run when video ID changes
 
   const hasPurchased = (purchaseData as any)?.hasPurchased || false;
   
