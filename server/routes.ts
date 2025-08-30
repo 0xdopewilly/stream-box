@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verify the Filecoin transaction if provided
       if (validatedData.transactionHash) {
-        const video = await storage.getVideo(validatedData.videoId || '');
+        const video = await storage.getVideo(validatedData.videoId!);
         if (!video) {
           return res.status(404).json({ error: "Video not found" });
         }
@@ -235,10 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Update video with Filecoin information
           const updatedVideo = await storage.updateVideo(req.params.id, {
-            videoUrl: filecoinResult.publicURL,
-            filecoinHash: filecoinResult.pdpProof.hash,
-            filecoinCid: filecoinResult.cid,
-            isVerified: filecoinResult.pdpProof.verified
+            videoUrl: filecoinResult.publicURL
           });
 
           if (!updatedVideo) {
