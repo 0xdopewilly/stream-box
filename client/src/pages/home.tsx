@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Shield, Coins, Globe, CheckCircle } from "lucide-react";
+import { Link } from "wouter";
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
 import { VideoCard } from "@/components/VideoCard";
@@ -37,7 +38,8 @@ interface Creator {
 
 export default function Home() {
   const { data: trendingVideos = [] } = useQuery<Video[]>({
-    queryKey: ["/api/videos", { trending: 8 }],
+    queryKey: ["/api/videos/trending"],
+    queryFn: () => fetch('/api/videos?trending=8').then(res => res.json()),
   });
 
   const { data: featuredCreators = [] } = useQuery<Creator[]>({
@@ -105,7 +107,7 @@ export default function Home() {
         </section>
 
         {/* Platform Benefits */}
-        <section className="py-16 bg-background">
+        <section id="benefits" className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold mb-4" data-testid="benefits-title">Why Choose StreamBox?</h2>
@@ -185,7 +187,7 @@ export default function Home() {
         </section>
 
         {/* Pricing Section */}
-        <section className="py-16 bg-card">
+        <section id="pricing" className="py-16 bg-card">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4" data-testid="pricing-title">Flexible Pricing Options</h2>
@@ -247,9 +249,11 @@ export default function Home() {
                     <span>Priority support</span>
                   </li>
                 </ul>
-                <Button className="w-full bg-primary hover:bg-primary/90">
-                  Start Creating
-                </Button>
+                <Link href="/upload">
+                  <Button className="w-full bg-primary hover:bg-primary/90">
+                    Start Creating
+                  </Button>
+                </Link>
               </Card>
               
               <Card className="bg-background rounded-xl p-8 border border-border" data-testid="pricing-enterprise">

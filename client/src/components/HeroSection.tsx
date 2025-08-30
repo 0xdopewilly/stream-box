@@ -1,6 +1,7 @@
 import { Play, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "wouter";
 
 export function HeroSection() {
   return (
@@ -28,19 +29,22 @@ export function HeroSection() {
             Upload, stream, and monetize your content on a tamper-proof, creator-owned platform powered by Filecoin.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button 
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold"
-              data-testid="start-creating-button"
-            >
-              <Play className="h-5 w-5 mr-2" />
-              Start Creating
-            </Button>
+            <Link href="/upload">
+              <Button 
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold"
+                data-testid="start-creating-button"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                Start Creating
+              </Button>
+            </Link>
             <Button 
               size="lg"
               variant="outline"
               className="px-8 py-4 text-lg font-semibold"
               data-testid="how-it-works-button"
+              onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
             >
               <Info className="h-5 w-5 mr-2" />
               How It Works

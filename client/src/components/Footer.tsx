@@ -31,30 +31,30 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Platform</h4>
             <ul className="space-y-3 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-how-it-works">How it Works</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-pricing">Pricing</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-creator-resources">Creator Resources</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-api-docs">API Documentation</a></li>
+              <li><Link href="/about" className="hover:text-foreground transition-colors" data-testid="footer-how-it-works">How it Works</Link></li>
+              <li><a href="#pricing" className="hover:text-foreground transition-colors" data-testid="footer-pricing">Pricing</a></li>
+              <li><Link href="/creators" className="hover:text-foreground transition-colors" data-testid="footer-creator-resources">Creator Resources</Link></li>
+              <li><a href="https://docs.streambox.com" className="hover:text-foreground transition-colors" data-testid="footer-api-docs">API Documentation</a></li>
             </ul>
           </div>
           
           <div>
             <h4 className="font-semibold mb-4">Technology</h4>
             <ul className="space-y-3 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-filecoin-storage">Filecoin Storage</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-content-verification">Content Verification</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-filcdn">FilCDN</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-security">Security</a></li>
+              <li><a href="https://filecoin.io/storage" className="hover:text-foreground transition-colors" data-testid="footer-filecoin-storage">Filecoin Storage</a></li>
+              <li><a href="#verification" className="hover:text-foreground transition-colors" data-testid="footer-content-verification">Content Verification</a></li>
+              <li><a href="https://docs.filcdn.network" className="hover:text-foreground transition-colors" data-testid="footer-filcdn">FilCDN</a></li>
+              <li><a href="#security" className="hover:text-foreground transition-colors" data-testid="footer-security">Security</a></li>
             </ul>
           </div>
           
           <div>
             <h4 className="font-semibold mb-4">Support</h4>
             <ul className="space-y-3 text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-help-center">Help Center</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-contact-us">Contact Us</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-community">Community</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors" data-testid="footer-bug-reports">Bug Reports</a></li>
+              <li><a href="https://help.streambox.com" className="hover:text-foreground transition-colors" data-testid="footer-help-center">Help Center</a></li>
+              <li><a href="mailto:support@streambox.com" className="hover:text-foreground transition-colors" data-testid="footer-contact-us">Contact Us</a></li>
+              <li><a href="https://discord.gg/streambox" className="hover:text-foreground transition-colors" data-testid="footer-community">Community</a></li>
+              <li><a href="https://github.com/streambox/issues" className="hover:text-foreground transition-colors" data-testid="footer-bug-reports">Bug Reports</a></li>
             </ul>
           </div>
         </div>
@@ -64,9 +64,9 @@ export function Footer() {
             © 2024 StreamBox. All rights reserved.
           </div>
           <div className="flex space-x-6 text-sm text-muted-foreground mt-4 md:mt-0">
-            <a href="#" className="hover:text-foreground transition-colors" data-testid="footer-privacy">Privacy Policy</a>
-            <a href="#" className="hover:text-foreground transition-colors" data-testid="footer-terms">Terms of Service</a>
-            <a href="#" className="hover:text-foreground transition-colors" data-testid="footer-cookies">Cookie Policy</a>
+            <a href="/privacy" className="hover:text-foreground transition-colors" data-testid="footer-privacy">Privacy Policy</a>
+            <a href="/terms" className="hover:text-foreground transition-colors" data-testid="footer-terms">Terms of Service</a>
+            <a href="/cookies" className="hover:text-foreground transition-colors" data-testid="footer-cookies">Cookie Policy</a>
           </div>
         </div>
       </div>

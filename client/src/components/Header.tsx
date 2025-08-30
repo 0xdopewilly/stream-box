@@ -45,17 +45,17 @@ export function Header({ onSearch }: HeaderProps) {
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={`transition-colors ${
-                    location === item.path
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
-                >
-                  {item.label}
-                </a>
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`transition-colors ${
+                  location === item.path
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid={`nav-${item.label.toLowerCase()}`}
+              >
+                {item.label}
               </Link>
             ))}
           </nav>
@@ -131,18 +131,18 @@ export function Header({ onSearch }: HeaderProps) {
             </form>
             <nav className="flex flex-col space-y-2">
               {navItems.map((item) => (
-                <Link key={item.path} href={item.path}>
-                  <a
-                    className={`block py-2 transition-colors ${
-                      location === item.path
-                        ? "text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    data-testid={`mobile-nav-${item.label.toLowerCase()}`}
-                  >
-                    {item.label}
-                  </a>
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`block py-2 transition-colors ${
+                    location === item.path
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  data-testid={`mobile-nav-${item.label.toLowerCase()}`}
+                >
+                  {item.label}
                 </Link>
               ))}
             </nav>
