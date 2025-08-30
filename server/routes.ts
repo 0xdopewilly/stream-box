@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertVideoSchema, insertUserSchema, insertPurchaseSchema } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
+import { filecoinService } from "./filecoinService";
+import { filecoinPayService } from "./filecoinPay";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Video routes
@@ -162,10 +164,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase routes
+  // Purchase routes with Filecoin Pay integration
   app.post("/api/purchases", async (req, res) => {
     try {
       const validatedData = insertPurchaseSchema.parse(req.body);
+      
+      // Verify the Filecoin transaction if provided
+      if (validatedData.transactionHash) {
+        const video = await storage.getVideo(validatedData.videoId || '');
+        if (!video) {
+          return res.status(404).json({ error: "Video not found" });
+        }
+
+        // Verify payment on Filecoin network
+        const paymentVerified = await filecoinPayService.verifyPayment(
+          validatedData.transactionHash,
+          video.price,
+          "0x742d35cc6634c0532925a3b8d5c0b5e1ba64e2c1" // Platform wallet address
+        );
+
+        if (!paymentVerified) {
+          return res.status(400).json({ error: "Payment verification failed" });
+        }
+      }
+      
       const purchase = await storage.createPurchase(validatedData);
       res.status(201).json(purchase);
     } catch (error) {
@@ -202,10 +224,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "videoURL is required" });
       }
 
+      // Check if this should be stored on Filecoin
+      if (req.body.useFilecoin && req.body.videoBuffer) {
+        try {
+          // Store video on Filecoin using WarmStorage
+          const videoBuffer = Buffer.from(req.body.videoBuffer, 'base64');
+          const filename = req.body.filename || `video-${req.params.id}.mp4`;
+          
+          const filecoinResult = await filecoinService.storeVideo(videoBuffer, filename);
+          
+          // Update video with Filecoin information
+          const updatedVideo = await storage.updateVideo(req.params.id, {
+            videoUrl: filecoinResult.publicURL,
+            filecoinHash: filecoinResult.pdpProof.hash,
+            filecoinCid: filecoinResult.cid,
+            isVerified: filecoinResult.pdpProof.verified
+          });
+
+          if (!updatedVideo) {
+            return res.status(404).json({ error: "Video not found" });
+          }
+
+          return res.json({ 
+            objectPath: filecoinResult.publicURL,
+            filecoinCid: filecoinResult.cid,
+            pdpProof: filecoinResult.pdpProof,
+            verified: filecoinResult.pdpProof.verified
+          });
+        } catch (filecoinError) {
+          console.error("Filecoin storage error:", filecoinError);
+          // Fall back to regular object storage
+        }
+      }
+
+      // Regular object storage fallback
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.videoURL);
 
-      // Update video with the normalized object path  
       const updatedVideo = await storage.updateVideo(req.params.id, {
         videoUrl: objectPath
       });

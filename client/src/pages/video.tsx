@@ -6,6 +6,8 @@ import { VideoPlayer } from "@/components/VideoPlayer";
 import { VideoCard } from "@/components/VideoCard";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { useFilecoinPay } from "@/hooks/useFilecoinPay";
+import { useWallet } from "@/hooks/useWallet";
 import { apiRequest } from "@/lib/queryClient";
 
 interface Video {
@@ -34,6 +36,8 @@ export default function VideoPage() {
   const { id } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { processPayment, isProcessing } = useFilecoinPay();
+  const { isConnected, connectWallet } = useWallet();
 
   const { data: video, isLoading } = useQuery<Video>({
     queryKey: ["/api/videos", id],
@@ -77,18 +81,42 @@ export default function VideoPage() {
     },
   });
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!video) return;
 
-    // Mock purchase with Filecoin Pay
-    const purchase = {
-      userId: "user1", // Mock user ID
-      videoId: video.id,
-      amount: video.price,
-      transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`, // Mock transaction hash
-    };
+    // Check wallet connection first
+    if (!isConnected) {
+      try {
+        await connectWallet();
+      } catch (error) {
+        toast({
+          title: "Wallet connection required",
+          description: "Please connect your MetaMask wallet to make a purchase.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
-    purchaseMutation.mutate(purchase);
+    // Process real Filecoin payment
+    const paymentResult = await processPayment({
+      amount: video.price,
+      recipient: "0x742d35cc6634c0532925a3b8d5c0b5e1ba64e2c1", // Platform wallet
+      videoId: video.id,
+      purchaseType: 'single'
+    });
+
+    if (paymentResult.success && paymentResult.transactionHash) {
+      // Create purchase record with real transaction hash
+      const purchase = {
+        userId: "user1", // In real app, get from wallet/auth
+        videoId: video.id,
+        amount: video.price,
+        transactionHash: paymentResult.transactionHash,
+      };
+
+      purchaseMutation.mutate(purchase);
+    }
   };
 
   const handleSearch = (query: string) => {
