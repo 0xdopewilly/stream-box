@@ -15,11 +15,8 @@ export function Header({ onSearch }: HeaderProps) {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, isConnecting } = useWallet();
   const { toast } = useToast();
-
-  // Debug wallet state
-  console.log('Header - isConnected:', isConnected, 'address:', address);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +98,7 @@ export function Header({ onSearch }: HeaderProps) {
             size="sm"
             className="w-8 h-8 bg-secondary rounded-full hover:bg-muted transition-colors p-0"
             onClick={() => {
-              if (!isConnected) {
+              if (!isConnected || !address) {
                 toast({
                   title: "Wallet Required",
                   description: "Please connect your wallet to view your profile.",

@@ -80,13 +80,14 @@ export function useWallet() {
             const chainId = await ethereum.request({ method: 'eth_chainId' });
             const balance = await getBalance(accounts[0]);
             
-            setWallet({
+            const newWalletState = {
               isConnected: true,
               address: accounts[0],
               isConnecting: false,
               balance,
               chainId,
-            });
+            };
+            setWallet(newWalletState);
           }
         } catch (error) {
           console.error('Failed to check existing connection:', error);
@@ -95,7 +96,7 @@ export function useWallet() {
     };
 
     checkExistingConnection();
-  }, [wallet.isConnected]);
+  }, []); // Remove wallet.isConnected dependency to avoid infinite loops
 
   const switchToFilecoin = async () => {
     const ethereum = (window as any).ethereum;
