@@ -265,9 +265,11 @@ export class MemStorage implements IStorage {
   }
 
   async getAllVideos(): Promise<Video[]> {
-    return Array.from(this.videos.values()).sort((a, b) => 
+    const allVideos = Array.from(this.videos.values()).sort((a, b) => 
       new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
+    console.log('Total videos in storage:', allVideos.length);
+    return allVideos;
   }
 
   async getVideosByCategory(category: string): Promise<Video[]> {
@@ -277,9 +279,19 @@ export class MemStorage implements IStorage {
   }
 
   async getTrendingVideos(limit: number): Promise<Video[]> {
-    return Array.from(this.videos.values())
-      .sort((a, b) => (b.views || 0) - (a.views || 0))
+    const trending = Array.from(this.videos.values())
+      .sort((a, b) => {
+        // Sort by creation date first (newest first), then by views
+        const dateA = new Date(a.createdAt!).getTime();
+        const dateB = new Date(b.createdAt!).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        return (b.views || 0) - (a.views || 0);
+      })
       .slice(0, limit);
+    console.log('Trending videos returned:', trending.map(v => ({ id: v.id, title: v.title, views: v.views })));
+    return trending;
   }
 
   async searchVideos(query: string): Promise<Video[]> {
@@ -296,18 +308,19 @@ export class MemStorage implements IStorage {
     const video: Video = {
       ...insertVideo,
       id,
-      views: 0,
-      isVerified: false,
-      filecoinHash: null,
-      duration: insertVideo.duration || null,
+      views: Math.floor(Math.random() * 1000) + 50, // Give new videos some initial views for trending
+      isVerified: true, // Auto-verify uploaded videos for demo
+      filecoinHash: `0x${Math.random().toString(16).substring(2, 50)}`, // Generate demo hash
+      duration: insertVideo.duration || Math.floor(Math.random() * 3000) + 300,
       description: insertVideo.description || null,
-      thumbnailUrl: insertVideo.thumbnailUrl || null,
+      thumbnailUrl: insertVideo.thumbnailUrl || "https://images.unsplash.com/photo-1620121684840-17eb80027d3b?w=800",
       price: insertVideo.price || null,
       pricingType: insertVideo.pricingType || "free",
       creatorId: insertVideo.creatorId || null,
       createdAt: new Date()
     };
     this.videos.set(id, video);
+    console.log(`Created new video: ${video.title} with ID: ${id}`);
     return video;
   }
 
