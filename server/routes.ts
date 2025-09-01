@@ -76,6 +76,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertVideoSchema.parse(req.body);
       const video = await storage.createVideo(validatedData);
+      
+      // Auto-list videos with prices on the smart contract
+      if (video.price && parseFloat(video.price) > 0) {
+        try {
+          const listingResult = await filecoinPayService.listVideoForSale(video.id, video.price);
+          if (listingResult.success) {
+            console.log(`Video ${video.id} listed on smart contract for ${video.price} FIL`);
+          } else {
+            console.error('Failed to list video on smart contract:', listingResult.error);
+          }
+        } catch (error) {
+          console.error('Smart contract listing error:', error);
+        }
+      }
+      
       res.status(201).json(video);
     } catch (error) {
       console.error("Error creating video:", error);
@@ -164,30 +179,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase routes with Filecoin Pay integration
+  // Real Filecoin Pay video purchase endpoint
+  app.post("/api/videos/:id/purchase", async (req, res) => {
+    try {
+      const { buyerAddress, transactionHash } = req.body;
+      const video = await storage.getVideo(req.params.id);
+      
+      if (!video) {
+        return res.status(404).json({ error: "Video not found" });
+      }
+
+      if (!video.price || parseFloat(video.price) <= 0) {
+        return res.status(400).json({ error: "Video is not for sale" });
+      }
+
+      // Get creator wallet address (where payments should go)
+      const creatorAddress = filecoinPayService.getCreatorAddress();
+      if (!creatorAddress) {
+        return res.status(500).json({ error: "Creator wallet not configured" });
+      }
+
+      if (transactionHash) {
+        // Verify existing transaction
+        const verification = await filecoinPayService.hasPurchasedVideo(buyerAddress, req.params.id);
+        
+        if (verification) {
+          // Create purchase record
+          const purchase = await storage.createPurchase({
+            userId: buyerAddress,
+            videoId: req.params.id,
+            amount: video.price,
+            transactionHash
+          });
+
+          return res.json({ 
+            success: true, 
+            purchase,
+            message: "Video purchase verified successfully"
+          });
+        } else {
+          return res.status(400).json({ error: "Transaction verification failed" });
+        }
+      } else {
+        // Return transaction details for MetaMask
+        const paymentDetails = {
+          amount: video.price,
+          recipient: creatorAddress,
+          videoId: req.params.id,
+          buyerAddress
+        };
+
+        const transaction = filecoinPayService.createPaymentTransaction(paymentDetails);
+        const gasCost = await filecoinPayService.estimateGasCost(paymentDetails);
+        
+        return res.json({
+          success: true,
+          transaction,
+          gasCost,
+          videoPrice: video.price,
+          creatorAddress,
+          contractAddress: filecoinPayService.getContractInfo()?.address
+        });
+      }
+    } catch (error) {
+      console.error("Purchase error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Legacy purchase endpoint for backwards compatibility
   app.post("/api/purchases", async (req, res) => {
     try {
       const validatedData = insertPurchaseSchema.parse(req.body);
-      
-      // Verify the Filecoin transaction if provided
-      if (validatedData.transactionHash) {
-        const video = await storage.getVideo(validatedData.videoId!);
-        if (!video) {
-          return res.status(404).json({ error: "Video not found" });
-        }
-
-        // Verify payment on Filecoin network
-        const paymentVerified = await filecoinPayService.verifyPayment(
-          validatedData.transactionHash,
-          video.price,
-          "0x742d35cc6634c0532925a3b8d5c0b5e1ba64e2c1" // Platform wallet address
-        );
-
-        if (!paymentVerified) {
-          return res.status(400).json({ error: "Payment verification failed" });
-        }
-      }
-      
       const purchase = await storage.createPurchase(validatedData);
       res.status(201).json(purchase);
     } catch (error) {

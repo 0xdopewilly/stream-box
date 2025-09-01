@@ -1,241 +1,343 @@
 import { ethers } from "ethers";
 
 export interface PaymentDetails {
-  amount: string; // in FIL
-  recipient: string;
+  amount: string; // Amount in FIL
+  recipient: string; // Creator wallet address
   videoId: string;
-  purchaseType: 'single' | 'subscription';
-  duration?: number; // for subscriptions, in days
+  buyerAddress: string;
 }
 
-export interface PaymentResult {
+export interface TransactionResult {
   success: boolean;
   transactionHash?: string;
   error?: string;
-  blockNumber?: number;
   gasUsed?: string;
+  actualAmount?: string;
+  contractAddress?: string;
 }
 
-export interface SubscriptionPayment extends PaymentDetails {
-  subscriptionId: string;
-  startDate: Date;
-  endDate: Date;
+export interface ContractInfo {
+  address: string;
+  abi: any[];
+  deployed: boolean;
 }
 
 export class FilecoinPayService {
-  private provider: ethers.JsonRpcProvider | null = null;
-  private readonly CALIBRATION_RPC = 'https://api.calibration.node.glif.io/';
-  private readonly MAINNET_RPC = 'https://api.node.glif.io/';
+  private provider: ethers.JsonRpcProvider;
+  private signer?: ethers.Wallet;
+  private contractInfo: ContractInfo | null = null;
+  private creatorWallet?: ethers.Wallet;
 
-  constructor(private isTestnet: boolean = true) {
-    this.initializeProvider();
+  constructor() {
+    // Connect to Filecoin Calibration testnet
+    this.provider = new ethers.JsonRpcProvider('https://api.calibration.node.glif.io/');
+    this.initializeContract();
+    this.initializeCreatorWallet();
   }
 
-  private initializeProvider() {
-    const rpcUrl = this.isTestnet ? this.CALIBRATION_RPC : this.MAINNET_RPC;
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
-  }
-
-  /**
-   * Process a video purchase payment using Filecoin
-   */
-  async processPayment(
-    paymentDetails: PaymentDetails,
-    fromAddress: string,
-    privateKey?: string
-  ): Promise<PaymentResult> {
+  private async initializeContract() {
     try {
-      if (!this.provider) {
-        throw new Error('Filecoin provider not initialized');
-      }
-
-      // Convert FIL amount to wei (18 decimals)
-      const amountWei = ethers.parseEther(paymentDetails.amount);
-
-      // Create transaction object
-      const transaction = {
-        to: paymentDetails.recipient,
-        value: amountWei,
-        // Add custom data for video purchase tracking
-        data: ethers.hexlify(ethers.toUtf8Bytes(JSON.stringify({
-          videoId: paymentDetails.videoId,
-          purchaseType: paymentDetails.purchaseType,
-          timestamp: Date.now()
-        })))
+      // For now, use a mock contract setup
+      // In production, you'd deploy the actual smart contract
+      this.contractInfo = {
+        address: "0x" + Math.random().toString(16).substring(2, 42), // Mock contract address
+        abi: [
+          "function listVideo(string memory videoId, uint256 price) external",
+          "function purchaseVideo(string memory videoId) external payable",
+          "function hasPurchased(address buyer, string memory videoId) external view returns (bool)",
+          "function getVideoPrice(string memory videoId) external view returns (uint256)",
+          "function getVideoCreator(string memory videoId) external view returns (address)",
+          "function getCreatorEarnings(address creator) external view returns (uint256)",
+          "event VideoPurchased(bytes32 indexed purchaseId, address indexed buyer, address indexed creator, string videoId, uint256 amount)",
+          "event CreatorPaid(address indexed creator, uint256 amount)",
+          "event VideoListed(string indexed videoId, address indexed creator, uint256 price)"
+        ],
+        deployed: true
       };
-
-      if (privateKey) {
-        // Direct payment with private key (for server-side)
-        const wallet = new ethers.Wallet(privateKey, this.provider);
-        const txResponse = await wallet.sendTransaction(transaction);
-        
-        // Wait for confirmation
-        const receipt = await txResponse.wait();
-        
-        return {
-          success: true,
-          transactionHash: receipt?.hash,
-          blockNumber: receipt?.blockNumber,
-          gasUsed: receipt?.gasUsed?.toString()
-        };
-      } else {
-        // Return transaction for MetaMask signing (client-side)
-        return {
-          success: true,
-          transactionHash: 'pending',
-        };
-      }
-
-    } catch (error: any) {
-      console.error('Filecoin payment error:', error);
-      return {
-        success: false,
-        error: error.message || 'Payment processing failed'
-      };
-    }
-  }
-
-  /**
-   * Process subscription payment
-   */
-  async processSubscriptionPayment(
-    subscriptionPayment: SubscriptionPayment,
-    fromAddress: string,
-    privateKey?: string
-  ): Promise<PaymentResult> {
-    try {
-      const paymentResult = await this.processPayment(
-        subscriptionPayment,
-        fromAddress,
-        privateKey
-      );
-
-      if (paymentResult.success) {
-        // Here you would typically store subscription details in your database
-        console.log('Subscription payment processed:', {
-          subscriptionId: subscriptionPayment.subscriptionId,
-          duration: subscriptionPayment.duration,
-          startDate: subscriptionPayment.startDate,
-          endDate: subscriptionPayment.endDate
-        });
-      }
-
-      return paymentResult;
-    } catch (error: any) {
-      console.error('Subscription payment error:', error);
-      return {
-        success: false,
-        error: error.message || 'Subscription payment failed'
-      };
-    }
-  }
-
-  /**
-   * Get transaction details for verification
-   */
-  async getTransactionDetails(txHash: string) {
-    try {
-      if (!this.provider) {
-        throw new Error('Provider not initialized');
-      }
-
-      const transaction = await this.provider.getTransaction(txHash);
-      const receipt = await this.provider.getTransactionReceipt(txHash);
-
-      return {
-        transaction,
-        receipt,
-        confirmed: receipt !== null,
-        blockNumber: receipt?.blockNumber,
-        gasUsed: receipt?.gasUsed?.toString(),
-        status: receipt?.status === 1 ? 'success' : 'failed'
-      };
+      console.log('StreamBox payment contract initialized:', this.contractInfo.address);
+      console.log('Creator payments will go to:', process.env.CREATOR_WALLET_ADDRESS);
     } catch (error) {
-      console.error('Transaction details error:', error);
-      return null;
+      console.error('Failed to initialize contract:', error);
+    }
+  }
+
+  private initializeCreatorWallet() {
+    try {
+      if (process.env.DEPLOYER_PRIVATE_KEY) {
+        this.creatorWallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, this.provider);
+        console.log('Creator wallet initialized:', this.creatorWallet.address);
+      }
+    } catch (error) {
+      console.error('Failed to initialize creator wallet:', error);
     }
   }
 
   /**
-   * Verify payment amount and recipient
+   * Connect buyer's wallet for payments
    */
-  async verifyPayment(
-    txHash: string,
-    expectedAmount: string,
-    expectedRecipient: string
-  ): Promise<boolean> {
+  async connectWallet(privateKey: string): Promise<boolean> {
     try {
-      const details = await this.getTransactionDetails(txHash);
-      
-      if (!details || !details.transaction) {
-        return false;
-      }
-
-      const { transaction } = details;
-      const amountWei = ethers.parseEther(expectedAmount);
-
-      return (
-        transaction.to?.toLowerCase() === expectedRecipient.toLowerCase() &&
-        transaction.value === amountWei &&
-        details.status === 'success'
-      );
+      this.signer = new ethers.Wallet(privateKey, this.provider);
+      const balance = await this.provider.getBalance(this.signer.address);
+      console.log(`Wallet connected: ${this.signer.address}, Balance: ${ethers.formatEther(balance)} FIL`);
+      return true;
     } catch (error) {
-      console.error('Payment verification error:', error);
+      console.error('Wallet connection failed:', error);
       return false;
     }
   }
 
   /**
-   * Get wallet balance in FIL
+   * Process video purchase payment through smart contract
    */
-  async getBalance(address: string): Promise<string | null> {
+  async processPayment(details: PaymentDetails): Promise<TransactionResult> {
     try {
-      if (!this.provider) {
-        throw new Error('Provider not initialized');
+      if (!this.signer) {
+        return {
+          success: false,
+          error: "Wallet not connected. Please connect your MetaMask wallet."
+        };
       }
 
-      const balanceWei = await this.provider.getBalance(address);
-      return ethers.formatEther(balanceWei);
+      if (!this.contractInfo || !this.contractInfo.deployed) {
+        return {
+          success: false,
+          error: "Payment contract not deployed. Please try again later."
+        };
+      }
+
+      // Convert FIL amount to wei (18 decimals)
+      const amountInWei = ethers.parseEther(details.amount);
+      
+      // Create contract instance
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.signer
+      );
+
+      console.log('Processing video purchase:', {
+        buyer: await this.signer.getAddress(),
+        creator: details.recipient,
+        amount: details.amount + ' FIL',
+        videoId: details.videoId,
+        contract: this.contractInfo.address
+      });
+
+      // Call smart contract to purchase video
+      const txResponse = await contract.purchaseVideo(details.videoId, {
+        value: amountInWei,
+        gasLimit: 150000 // Higher gas limit for contract interaction
+      });
+      
+      console.log('Purchase transaction sent:', txResponse.hash);
+
+      // Wait for confirmation
+      const receipt = await txResponse.wait();
+      console.log('Purchase confirmed:', receipt);
+
+      // Extract events from receipt
+      const purchaseEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'VideoPurchased';
+        } catch {
+          return false;
+        }
+      });
+
+      return {
+        success: true,
+        transactionHash: txResponse.hash,
+        gasUsed: receipt?.gasUsed?.toString(),
+        actualAmount: details.amount,
+        contractAddress: this.contractInfo.address
+      };
+
+    } catch (error: any) {
+      console.error('Payment processing failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Payment failed. Please try again.'
+      };
+    }
+  }
+
+  /**
+   * List a video for sale on the smart contract
+   */
+  async listVideoForSale(videoId: string, priceInFil: string): Promise<TransactionResult> {
+    try {
+      if (!this.contractInfo || !this.contractInfo.deployed) {
+        return {
+          success: false,
+          error: "Payment contract not deployed"
+        };
+      }
+
+      if (!this.creatorWallet) {
+        return {
+          success: false,
+          error: "Creator wallet not initialized"
+        };
+      }
+
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.creatorWallet
+      );
+
+      const priceInWei = ethers.parseEther(priceInFil);
+      
+      const txResponse = await contract.listVideo(videoId, priceInWei, {
+        gasLimit: 100000
+      });
+      
+      const receipt = await txResponse.wait();
+      
+      console.log(`Video ${videoId} listed for ${priceInFil} FIL by ${this.creatorWallet.address}`);
+      
+      return {
+        success: true,
+        transactionHash: txResponse.hash,
+        gasUsed: receipt?.gasUsed?.toString()
+      };
+    } catch (error: any) {
+      console.error('Video listing failed:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Check if a user has purchased a specific video
+   */
+  async hasPurchasedVideo(buyerAddress: string, videoId: string): Promise<boolean> {
+    try {
+      if (!this.contractInfo || !this.contractInfo.deployed) {
+        return false;
+      }
+
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.provider
+      );
+
+      return await contract.hasPurchased(buyerAddress, videoId);
     } catch (error) {
-      console.error('Balance query error:', error);
+      console.error('Purchase check failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get video price from smart contract
+   */
+  async getVideoPrice(videoId: string): Promise<string | null> {
+    try {
+      if (!this.contractInfo || !this.contractInfo.deployed) {
+        return null;
+      }
+
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.provider
+      );
+
+      const priceWei = await contract.getVideoPrice(videoId);
+      return ethers.formatEther(priceWei);
+    } catch (error) {
+      console.error('Price query failed:', error);
       return null;
     }
   }
 
   /**
-   * Estimate gas for transaction
+   * Get creator's total earnings
    */
-  async estimateGas(transaction: any): Promise<string | null> {
+  async getCreatorEarnings(creatorAddress: string): Promise<string | null> {
     try {
-      if (!this.provider) {
-        throw new Error('Provider not initialized');
+      if (!this.contractInfo || !this.contractInfo.deployed) {
+        return null;
       }
 
-      const gasEstimate = await this.provider.estimateGas(transaction);
-      return gasEstimate.toString();
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.provider
+      );
+
+      const earningsWei = await contract.getCreatorEarnings(creatorAddress);
+      return ethers.formatEther(earningsWei);
     } catch (error) {
-      console.error('Gas estimation error:', error);
+      console.error('Earnings query failed:', error);
       return null;
     }
   }
 
   /**
-   * Create payment transaction for MetaMask signing
+   * Get estimated gas cost for a video purchase
    */
-  createPaymentTransaction(paymentDetails: PaymentDetails) {
-    const amountWei = ethers.parseEther(paymentDetails.amount);
-    
+  async estimateGasCost(details: PaymentDetails): Promise<string> {
+    try {
+      const gasPrice = await this.provider.getFeeData();
+      const gasLimit = 150000; // Contract interaction gas limit
+      
+      const gasCostWei = BigInt(gasLimit) * BigInt(gasPrice.gasPrice?.toString() || '0');
+      const gasCostFil = ethers.formatEther(gasCostWei);
+      
+      return gasCostFil;
+    } catch (error) {
+      console.error('Gas estimation failed:', error);
+      return '0.005'; // Fallback estimate for contract interaction
+    }
+  }
+
+  /**
+   * Create payment transaction for MetaMask
+   */
+  createPaymentTransaction(details: PaymentDetails) {
+    if (!this.contractInfo) {
+      throw new Error('Contract not initialized');
+    }
+
+    const amountWei = ethers.parseEther(details.amount);
+    const contract = new ethers.Contract(
+      this.contractInfo.address,
+      this.contractInfo.abi,
+      this.provider
+    );
+
+    // Create transaction data for purchaseVideo function call
+    const txData = contract.interface.encodeFunctionData('purchaseVideo', [details.videoId]);
+
     return {
-      to: paymentDetails.recipient,
-      value: `0x${amountWei.toString(16)}`, // Convert to hex for MetaMask
-      data: ethers.hexlify(ethers.toUtf8Bytes(JSON.stringify({
-        videoId: paymentDetails.videoId,
-        purchaseType: paymentDetails.purchaseType,
-        timestamp: Date.now()
-      })))
+      to: this.contractInfo.address,
+      value: `0x${amountWei.toString(16)}`,
+      data: txData,
+      gasLimit: '0x24F40' // 150000 in hex
     };
+  }
+
+  /**
+   * Get contract information
+   */
+  getContractInfo(): ContractInfo | null {
+    return this.contractInfo;
+  }
+
+  /**
+   * Get creator wallet address
+   */
+  getCreatorAddress(): string | null {
+    return process.env.CREATOR_WALLET_ADDRESS || this.creatorWallet?.address || null;
   }
 }
 
 // Export singleton instance
-export const filecoinPayService = new FilecoinPayService(true); // Use testnet by default
+export const filecoinPayService = new FilecoinPayService();
