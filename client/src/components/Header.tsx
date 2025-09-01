@@ -15,8 +15,11 @@ export function Header({ onSearch }: HeaderProps) {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConnected } = useWallet();
+  const { isConnected, address } = useWallet();
   const { toast } = useToast();
+
+  // Debug wallet state
+  console.log('Header - isConnected:', isConnected, 'address:', address);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,6 +8,7 @@ import Discover from "@/pages/discover";
 import Creators from "@/pages/creators";
 import Upload from "@/pages/upload";
 import Video from "@/pages/video";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/creators" component={Creators} />
       <Route path="/upload" component={Upload} />
       <Route path="/video/:id" component={Video} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );

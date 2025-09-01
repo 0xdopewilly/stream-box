@@ -99,24 +99,40 @@ export default function VideoPage() {
     }
 
     // Process real Filecoin payment
-    const paymentResult = await processPayment({
-      amount: video.price,
-      recipient: "0x742d35cc6634c0532925a3b8d5c0b5e1ba64e2c1", // Platform wallet
-      videoId: video.id,
-      purchaseType: 'single'
-    });
-
-    if (paymentResult.success && paymentResult.transactionHash) {
-      // Create purchase record with real transaction hash
-      const purchase = {
-        userId: "user1", // In real app, get from wallet/auth
-        videoId: video.id,
+    try {
+      const paymentResult = await processPayment({
         amount: video.price,
-        transactionHash: paymentResult.transactionHash,
-      };
+        recipient: "0x742d35cc6634c0532925a3b8d5c0b5e1ba64e2c1", // Platform wallet
+        videoId: video.id,
+        purchaseType: 'single'
+      });
 
-      purchaseMutation.mutate(purchase);
+      if (paymentResult.success && paymentResult.transactionHash) {
+        // Create purchase record with real transaction hash
+        const purchase = {
+          userId: "user1", // In real app, get from wallet/auth
+          videoId: video.id,
+          amount: video.price,
+          transactionHash: paymentResult.transactionHash,
+        };
+
+        purchaseMutation.mutate(purchase);
+      } else {
+        toast({
+          title: "Payment failed",
+          description: "The payment could not be processed. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Payment error",
+        description: error.message || "An unexpected error occurred during payment.",
+        variant: "destructive",
+      });
     }
+
   };
 
   const handleSearch = (query: string) => {
