@@ -62,10 +62,16 @@ export function useWallet() {
     }
   }, [wallet]);
 
-  // Check for existing connection on page load
+  // Check for existing connection on page load only if user didn't manually disconnect
   useEffect(() => {
     const checkExistingConnection = async () => {
       if (typeof window !== 'undefined' && (window as any).ethereum && !wallet.isConnected) {
+        // Check if user manually disconnected
+        const wasManuallyDisconnected = localStorage.getItem('streambox_wallet_disconnected');
+        if (wasManuallyDisconnected === 'true') {
+          return; // Don't auto-reconnect if user manually disconnected
+        }
+
         try {
           const ethereum = (window as any).ethereum;
           const accounts = await ethereum.request({ method: 'eth_accounts' });
@@ -180,6 +186,11 @@ export function useWallet() {
           chainId,
         };
         setWallet(newWalletState);
+        
+        // Clear the manual disconnect flag when user connects
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('streambox_wallet_disconnected');
+        }
 
         // Listen for account changes
         ethereum.on('accountsChanged', (newAccounts: string[]) => {
@@ -235,9 +246,10 @@ export function useWallet() {
     };
     setWallet(disconnectedState);
     
-    // Clear localStorage
+    // Clear localStorage and mark as manually disconnected
     if (typeof window !== 'undefined') {
       localStorage.removeItem('streambox_wallet');
+      localStorage.setItem('streambox_wallet_disconnected', 'true');
     }
   }, []);
 
