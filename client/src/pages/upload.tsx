@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CloudUpload, Shield } from "lucide-react";
+import { CloudUpload, Shield, Wallet, AlertTriangle } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ObjectUploader } from "@/components/ObjectUploader";
@@ -12,7 +12,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/hooks/useWallet";
 import { apiRequest } from "@/lib/queryClient";
 import type { UploadResult } from "@uppy/core";
 
@@ -37,6 +39,21 @@ export default function Upload() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isConnected, isFilecoinNetwork, connectWallet, isConnecting, address } = useWallet();
+
+  // Redirect to home if wallet not connected
+  useEffect(() => {
+    if (!isConnected && !isConnecting) {
+      toast({
+        title: "Wallet Required",
+        description: "Please connect your wallet to upload videos.",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000);
+    }
+  }, [isConnected, isConnecting, toast]);
 
   const createVideoMutation = useMutation({
     mutationFn: async (videoData: any) => {
@@ -143,6 +160,25 @@ export default function Upload() {
     setIsUploading(true);
     
     try {
+      // Ensure wallet is connected before uploading
+      if (!isConnected || !address) {
+        toast({
+          title: "Wallet Required",
+          description: "Please connect your wallet to upload videos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!isFilecoinNetwork) {
+        toast({
+          title: "Wrong Network",
+          description: "Please switch to Filecoin network to upload videos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create video record
       const videoData = {
         title: formData.title.trim(),
@@ -151,7 +187,7 @@ export default function Upload() {
         price: formData.pricingType === 'payper' ? formData.price : "0",
         pricingType: formData.pricingType,
         videoUrl: "/temp", // temporary, will be updated
-        creatorId: "user1", // Mock creator ID - in real app this would come from auth
+        creatorId: address, // Use connected wallet address as creator ID
       };
 
       const createdVideo = await createVideoMutation.mutateAsync(videoData);
@@ -186,6 +222,86 @@ export default function Upload() {
     "Business"
   ];
 
+  // Show wallet connection requirement if not connected
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Header onSearch={handleSearch} />
+        
+        <main className="pt-20">
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-2xl mx-auto text-center">
+              <Alert className="mb-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  You need to connect your wallet to upload videos to StreamBox.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="bg-card rounded-xl p-12 border">
+                <Wallet className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+                <h1 className="text-3xl font-bold mb-4">Connect Your Wallet</h1>
+                <p className="text-muted-foreground text-lg mb-8">
+                  StreamBox uses decentralized technology. Connect your wallet to upload, monetize, and manage your content on the blockchain.
+                </p>
+                
+                <Button
+                  size="lg"
+                  onClick={connectWallet}
+                  disabled={isConnecting}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold"
+                >
+                  <Wallet className="h-5 w-5 mr-2" />
+                  {isConnecting ? "Connecting..." : "Connect Wallet"}
+                </Button>
+                
+                <p className="text-sm text-muted-foreground mt-6">
+                  By connecting your wallet, you agree to use Filecoin network for secure, decentralized storage.
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show network error if not on Filecoin network
+  if (!isFilecoinNetwork) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Header onSearch={handleSearch} />
+        
+        <main className="pt-20">
+          <div className="container mx-auto px-4 py-8">
+            <div className="max-w-2xl mx-auto text-center">
+              <Alert className="mb-8">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Please switch to Filecoin Calibration network to upload videos.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="bg-card rounded-xl p-12 border">
+                <Shield className="h-16 w-16 text-muted-foreground mx-auto mb-6" />
+                <h1 className="text-3xl font-bold mb-4">Wrong Network</h1>
+                <p className="text-muted-foreground text-lg mb-8">
+                  StreamBox requires Filecoin Calibration network for secure, decentralized video storage. Please switch networks in your wallet.
+                </p>
+                
+                <Badge className="bg-primary/10 text-primary border-primary/20 px-4 py-2">
+                  Current: {address ? address.slice(0, 6) + '...' + address.slice(-4) : 'Unknown'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header onSearch={handleSearch} />
@@ -199,6 +315,16 @@ export default function Upload() {
               <p className="text-muted-foreground text-lg">
                 Share your content with the world using decentralized storage and built-in monetization
               </p>
+              
+              {/* Wallet Status */}
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                  ✓ Wallet Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                </Badge>
+                <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                  ✓ Filecoin Network
+                </Badge>
+              </div>
             </div>
             
             <form onSubmit={handleSubmit}>

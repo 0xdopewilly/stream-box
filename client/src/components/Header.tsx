@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WalletButton } from "@/components/WalletButton";
+import { useWallet } from "@/hooks/useWallet";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   onSearch?: (query: string) => void;
@@ -13,6 +15,8 @@ export function Header({ onSearch }: HeaderProps) {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isConnected } = useWallet();
+  const { toast } = useToast();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,9 +93,26 @@ export function Header({ onSearch }: HeaderProps) {
           <WalletButton />
           
           {/* User Menu */}
-          <div className="w-8 h-8 bg-secondary rounded-full flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
-            <i className="fas fa-user text-sm" data-testid="user-menu"></i>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-8 h-8 bg-secondary rounded-full hover:bg-muted transition-colors p-0"
+            onClick={() => {
+              if (!isConnected) {
+                toast({
+                  title: "Wallet Required",
+                  description: "Please connect your wallet to view your profile.",
+                  variant: "destructive",
+                });
+              } else {
+                // Navigate to profile page
+                window.location.href = '/profile';
+              }
+            }}
+            data-testid="user-menu"
+          >
+            <User className="h-4 w-4" />
+          </Button>
           
           {/* Mobile Menu Toggle */}
           <Button
