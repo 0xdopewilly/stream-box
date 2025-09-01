@@ -7,7 +7,7 @@ import { VideoCard } from "@/components/VideoCard";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useFilecoinPay } from "@/hooks/useFilecoinPay";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/contexts/WalletContext";
 import { apiRequest } from "@/lib/queryClient";
 
 interface Video {

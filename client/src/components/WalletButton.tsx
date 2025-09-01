@@ -2,7 +2,7 @@ import { Wallet, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/contexts/WalletContext";
 
 export function WalletButton() {
   const { isConnected, shortAddress, isConnecting, connectWallet, disconnectWallet, balance, isFilecoinNetwork } = useWallet();

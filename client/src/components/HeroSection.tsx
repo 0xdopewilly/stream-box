@@ -2,7 +2,7 @@ import { Play, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/contexts/WalletContext";
 import { useToast } from "@/hooks/use-toast";
 
 export function HeroSection() {

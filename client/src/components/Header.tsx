@@ -4,7 +4,7 @@ import { Search, Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WalletButton } from "@/components/WalletButton";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/contexts/WalletContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {

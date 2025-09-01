@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/contexts/WalletContext";
 import { apiRequest } from "@/lib/queryClient";
 import type { UploadResult } from "@uppy/core";
 
