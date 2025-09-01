@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 interface WalletState {
   isConnected: boolean;
@@ -34,13 +34,62 @@ const FILECOIN_CALIBRATION = {
 };
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletState>({
-    isConnected: false,
-    address: null,
-    isConnecting: false,
-    balance: null,
-    chainId: null,
+  const [wallet, setWallet] = useState<WalletState>(() => {
+    // Try to restore wallet state from localStorage
+    if (typeof window !== 'undefined') {
+      const savedWallet = localStorage.getItem('streambox_wallet');
+      if (savedWallet) {
+        try {
+          return JSON.parse(savedWallet);
+        } catch (e) {
+          console.error('Failed to parse saved wallet state:', e);
+        }
+      }
+    }
+    return {
+      isConnected: false,
+      address: null,
+      isConnecting: false,
+      balance: null,
+      chainId: null,
+    };
   });
+
+  // Save wallet state to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('streambox_wallet', JSON.stringify(wallet));
+    }
+  }, [wallet]);
+
+  // Check for existing connection on page load
+  useEffect(() => {
+    const checkExistingConnection = async () => {
+      if (typeof window !== 'undefined' && (window as any).ethereum && !wallet.isConnected) {
+        try {
+          const ethereum = (window as any).ethereum;
+          const accounts = await ethereum.request({ method: 'eth_accounts' });
+          
+          if (accounts && accounts.length > 0) {
+            const chainId = await ethereum.request({ method: 'eth_chainId' });
+            const balance = await getBalance(accounts[0]);
+            
+            setWallet({
+              isConnected: true,
+              address: accounts[0],
+              isConnecting: false,
+              balance,
+              chainId,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to check existing connection:', error);
+        }
+      }
+    };
+
+    checkExistingConnection();
+  }, [wallet.isConnected]);
 
   const switchToFilecoin = async () => {
     const ethereum = (window as any).ethereum;
@@ -123,13 +172,14 @@ export function useWallet() {
         // Get balance
         const balance = await getBalance(accounts[0]);
 
-        setWallet({
+        const newWalletState = {
           isConnected: true,
           address: accounts[0],
           isConnecting: false,
           balance,
           chainId,
-        });
+        };
+        setWallet(newWalletState);
 
         // Listen for account changes
         ethereum.on('accountsChanged', (newAccounts: string[]) => {
@@ -176,13 +226,19 @@ export function useWallet() {
   }, []);
 
   const disconnectWallet = useCallback(() => {
-    setWallet({
+    const disconnectedState = {
       isConnected: false,
       address: null,
       isConnecting: false,
       balance: null,
       chainId: null,
-    });
+    };
+    setWallet(disconnectedState);
+    
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('streambox_wallet');
+    }
   }, []);
 
   const shortAddress = wallet.address 

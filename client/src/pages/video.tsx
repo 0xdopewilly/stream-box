@@ -45,7 +45,7 @@ export default function VideoPage() {
   });
 
   const { data: relatedVideos = [] } = useQuery<Video[]>({
-    queryKey: ["/api/videos", { category: video?.category }],
+    queryKey: ["/api/videos", video?.category],
     enabled: !!video?.category,
   });
 
