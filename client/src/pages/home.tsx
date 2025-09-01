@@ -8,6 +8,8 @@ import { CreatorCard } from "@/components/CreatorCard";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useWallet } from "@/hooks/useWallet";
+import { useToast } from "@/hooks/use-toast";
 
 interface Video {
   id: string;
@@ -37,6 +39,32 @@ interface Creator {
 }
 
 export default function Home() {
+  const { connectWallet, isConnected, isConnecting } = useWallet();
+  const { toast } = useToast();
+  
+  const handleGetStarted = async () => {
+    if (!isConnected) {
+      try {
+        await connectWallet();
+        toast({
+          title: "Welcome to StreamBox!",
+          description: "Wallet connected successfully. You can now start watching premium content.",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Connection Failed",
+          description: error.message || "Please try connecting your wallet again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Already Connected",
+        description: "Your wallet is already connected. Enjoy streaming!",
+      });
+    }
+  };
+  
   const { data: trendingVideos = [] } = useQuery<Video[]>({
     queryKey: ["/api/videos/trending"],
     queryFn: () => fetch('/api/videos?trending=8').then(res => res.json()),
@@ -217,8 +245,14 @@ export default function Home() {
                     <span>Content verification</span>
                   </li>
                 </ul>
-                <Button variant="secondary" className="w-full">
-                  Get Started
+                <Button 
+                  variant="secondary" 
+                  className="w-full"
+                  onClick={handleGetStarted}
+                  disabled={isConnecting}
+                  data-testid="get-started-free"
+                >
+                  {isConnecting ? "Connecting..." : isConnected ? "Start Watching" : "Get Started"}
                 </Button>
               </Card>
               
@@ -280,8 +314,14 @@ export default function Home() {
                     <span>Custom integrations</span>
                   </li>
                 </ul>
-                <Button variant="secondary" className="w-full">
-                  Contact Sales
+                <Button 
+                  variant="secondary" 
+                  className="w-full"
+                  onClick={handleGetStarted}
+                  disabled={isConnecting}
+                  data-testid="contact-sales"
+                >
+                  {isConnecting ? "Connecting..." : isConnected ? "Contact Sales" : "Get Started"}
                 </Button>
               </Card>
             </div>

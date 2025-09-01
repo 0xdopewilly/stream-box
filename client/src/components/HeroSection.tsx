@@ -2,8 +2,37 @@ import { Play, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { useWallet } from "@/hooks/useWallet";
+import { useToast } from "@/hooks/use-toast";
 
 export function HeroSection() {
+  const { connectWallet, isConnected, isConnecting } = useWallet();
+  const { toast } = useToast();
+  
+  const handleStartCreating = async () => {
+    if (!isConnected) {
+      try {
+        await connectWallet();
+        toast({
+          title: "Wallet Connected!",
+          description: "Successfully connected to Filecoin network.",
+        });
+        // After successful connection, navigate to upload
+        setTimeout(() => {
+          window.location.href = '/upload';
+        }, 1000);
+      } catch (error: any) {
+        toast({
+          title: "Connection Failed",
+          description: error.message || "Failed to connect wallet. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      window.location.href = '/upload';
+    }
+  };
+  
   return (
     <section className="relative h-[70vh] overflow-hidden">
       <div 
@@ -29,16 +58,16 @@ export function HeroSection() {
             Upload, stream, and monetize your content on a tamper-proof, creator-owned platform powered by Filecoin.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href="/upload">
-              <Button 
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold"
-                data-testid="start-creating-button"
-              >
-                <Play className="h-5 w-5 mr-2" />
-                Start Creating
-              </Button>
-            </Link>
+            <Button 
+              size="lg"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg font-semibold"
+              data-testid="start-creating-button"
+              onClick={handleStartCreating}
+              disabled={isConnecting}
+            >
+              <Play className="h-5 w-5 mr-2" />
+              {isConnecting ? "Connecting Wallet..." : isConnected ? "Start Creating" : "Connect & Create"}
+            </Button>
             <Button 
               size="lg"
               variant="outline"

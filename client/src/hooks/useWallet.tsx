@@ -163,7 +163,15 @@ export function useWallet() {
     } catch (error: any) {
       console.error("Wallet connection failed:", error);
       setWallet(prev => ({ ...prev, isConnecting: false }));
-      throw error;
+      
+      // Handle user rejection gracefully
+      if (error.code === 4001) {
+        throw new Error('Please accept the connection request to continue.');
+      } else if (error.message?.includes('MetaMask not detected')) {
+        throw new Error('MetaMask not detected. Please install MetaMask to use this feature.');
+      } else {
+        throw new Error('Failed to connect wallet. Please try again.');
+      }
     }
   }, []);
 
