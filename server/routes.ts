@@ -429,6 +429,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // FilCDN video streaming endpoint for Synapse SDK uploads
+  app.get("/api/videos/:pieceCid/stream", async (req, res) => {
+    try {
+      const { pieceCid } = req.params;
+      
+      if (!pieceCid) {
+        return res.status(400).json({ error: "Piece CID is required" });
+      }
+
+      console.log('Streaming video via FilCDN:', pieceCid);
+
+      if (!synapseService.isConnected()) {
+        console.error('Synapse SDK not connected for FilCDN streaming');
+        return res.status(503).json({ 
+          error: "Filecoin streaming service unavailable",
+          fallback: "Please use traditional storage"
+        });
+      }
+
+      // Retrieve file from Filecoin via FilCDN using Synapse SDK
+      const retrievalResult = await synapseService.retrieveFile(pieceCid);
+
+      if (!retrievalResult.success) {
+        console.error('FilCDN retrieval failed:', retrievalResult.error);
+        return res.status(404).json({ 
+          error: "Video not found on Filecoin network",
+          details: retrievalResult.error
+        });
+      }
+
+      if (!retrievalResult.data) {
+        return res.status(500).json({ error: "No video data retrieved" });
+      }
+
+      // Set appropriate headers for video streaming
+      const mimeType = retrievalResult.mimeType || 'video/mp4';
+      const dataBuffer = Buffer.from(retrievalResult.data);
+
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Length', dataBuffer.length);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      res.setHeader('X-Served-By', 'FilCDN-Synapse-SDK');
+
+      // Handle range requests for video seeking
+      const range = req.headers.range;
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : dataBuffer.length - 1;
+        const chunksize = (end - start) + 1;
+        const chunk = dataBuffer.slice(start, end + 1);
+
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${dataBuffer.length}`);
+        res.setHeader('Content-Length', chunksize);
+        res.end(chunk);
+      } else {
+        res.status(200);
+        res.end(dataBuffer);
+      }
+
+      console.log(`FilCDN streaming successful for ${pieceCid}, size: ${dataBuffer.length} bytes`);
+
+    } catch (error) {
+      console.error("FilCDN streaming error:", error);
+      res.status(500).json({ 
+        error: "Filecoin streaming failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
