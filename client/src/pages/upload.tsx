@@ -24,6 +24,7 @@ interface VideoFormData {
   category: string;
   pricingType: 'free' | 'payper' | 'subscription';
   price: string;
+  storageType: 'traditional' | 'filecoin';
 }
 
 export default function Upload() {
@@ -33,6 +34,7 @@ export default function Upload() {
     category: "",
     pricingType: "free",
     price: "0",
+    storageType: "filecoin",
   });
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -73,6 +75,7 @@ export default function Upload() {
         category: "",
         pricingType: "free",
         price: "0",
+        storageType: "filecoin",
       });
       setUploadedVideoUrl("");
     },
@@ -87,8 +90,17 @@ export default function Upload() {
   });
 
   const updateVideoFileMutation = useMutation({
-    mutationFn: async ({ videoId, videoURL }: { videoId: string; videoURL: string }) => {
-      const response = await apiRequest("PUT", `/api/videos/${videoId}/file`, { videoURL });
+    mutationFn: async ({ videoId, videoURL, useFilecoin, storageType }: { 
+      videoId: string; 
+      videoURL: string; 
+      useFilecoin?: boolean;
+      storageType?: string;
+    }) => {
+      const response = await apiRequest("PUT", `/api/videos/${videoId}/file`, { 
+        videoURL, 
+        useFilecoin,
+        storageType
+      });
       return response.json();
     },
   });
@@ -113,7 +125,9 @@ export default function Upload() {
       setUploadedVideoUrl(uploadedFile.uploadURL || "");
       toast({
         title: "File uploaded successfully!",
-        description: "Your video has been uploaded to Filecoin storage.",
+        description: formData.storageType === 'filecoin' 
+          ? "Your video has been uploaded to Filecoin with PDP proof via Synapse SDK."
+          : "Your video has been uploaded to cloud storage.",
       });
     }
   };
@@ -192,10 +206,12 @@ export default function Upload() {
 
       const createdVideo = await createVideoMutation.mutateAsync(videoData);
 
-      // Update with actual video file URL
+      // Update with actual video file URL and storage type
       await updateVideoFileMutation.mutateAsync({
         videoId: createdVideo.id,
         videoURL: uploadedVideoUrl,
+        useFilecoin: formData.storageType === 'filecoin',
+        storageType: formData.storageType,
       });
       
     } catch (error) {
@@ -417,9 +433,63 @@ export default function Upload() {
                     </div>
                   </div>
                   
-                  {/* Monetization */}
+                  {/* Storage & Monetization */}
                   <div className="space-y-6">
-                    <h2 className="text-lg font-semibold">Monetization</h2>
+                    <h2 className="text-lg font-semibold">Storage & Monetization</h2>
+                    
+                    {/* Storage Type Selection */}
+                    <div>
+                      <Label className="text-base font-medium mb-3 block">Storage Type</Label>
+                      <RadioGroup 
+                        value={formData.storageType} 
+                        onValueChange={(value: 'traditional' | 'filecoin') => setFormData(prev => ({ ...prev, storageType: value }))}
+                        className="space-y-3"
+                      >
+                        <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                          <RadioGroupItem value="filecoin" id="filecoin" className="mt-1" data-testid="radio-filecoin" />
+                          <div className="flex-1">
+                            <Label htmlFor="filecoin" className="font-medium cursor-pointer">
+                              Filecoin Decentralized Storage (Recommended)
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Store your video on Filecoin network with PDP proofs via Synapse SDK. 
+                              Tamper-proof, verifiable, and creator-owned storage with FilCDN optimization.
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs">
+                                PDP Verified
+                              </Badge>
+                              <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs">
+                                FilCDN Optimized
+                              </Badge>
+                              <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20 text-xs">
+                                Synapse SDK
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                          <RadioGroupItem value="traditional" id="traditional" className="mt-1" data-testid="radio-traditional" />
+                          <div className="flex-1">
+                            <Label htmlFor="traditional" className="font-medium cursor-pointer">
+                              Traditional Cloud Storage
+                            </Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Store your video using traditional cloud storage infrastructure. 
+                              Fast upload and immediate availability.
+                            </p>
+                            <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20 text-xs mt-2">
+                              Cloud Hosted
+                            </Badge>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    {/* Monetization Options */}
+                    <div>
+                      <Label className="text-base font-medium mb-3 block">Monetization</Label>
                     
                     <RadioGroup
                       value={formData.pricingType}
@@ -493,12 +563,12 @@ export default function Upload() {
                     {isUploading || createVideoMutation.isPending ? (
                       <>
                         <i className="fas fa-spinner fa-spin mr-2"></i>
-                        Uploading to Filecoin...
+                        Uploading to {formData.storageType === 'filecoin' ? 'Filecoin via Synapse SDK' : 'Cloud Storage'}...
                       </>
                     ) : (
                       <>
                         <CloudUpload className="h-5 w-5 mr-2" />
-                        Upload to Filecoin
+                        Upload to {formData.storageType === 'filecoin' ? 'Filecoin' : 'Cloud Storage'}
                       </>
                     )}
                   </Button>
