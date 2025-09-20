@@ -103,19 +103,9 @@ export class SynapseService {
     }
 
     try {
-      // Mock balance data for now - will be replaced with actual Synapse calls
-      const mockBalance = {
-        usdfcBalance: "1000000000", // 1000 USDFC (assuming 6 decimals)
-        filecoinWarmStorageBalance: "500000000", // 500 USDFC
-        persistenceDaysLeft: 45,
-        rateNeeded: "100000", // 0.1 USDFC per day
-        lockUpNeeded: "9000000", // 9 USDFC for 90 days
-        depositNeeded: "4500000", // 4.5 USDFC additional deposit needed
-        isSufficient: true
-      };
-      
-      console.log('Retrieved balance info (mock data):', mockBalance);
-      return mockBalance;
+      // Use real Synapse SDK methods when available
+      // For now, return error to indicate this needs real implementation
+      throw new Error('Real USDFC balance checking not yet implemented - requires Synapse SDK balance methods');
     } catch (error) {
       console.error('Failed to get balance info:', error);
       throw error;
@@ -181,18 +171,10 @@ export class SynapseService {
       };
     } catch (error) {
       console.error('Failed to upload file via Synapse SDK:', error);
-      
-      // For demo purposes, return a mock successful result
-      const mockResult = {
-        success: true,
-        pieceCid: `baga6ea4seaq${Math.random().toString(36).substring(2)}`,
-        commP: `bafy2bzace${Math.random().toString(36).substring(2)}`,
-        datasetId: `dataset_${Math.random().toString(36).substring(2)}`,
-        transactionHash: `0x${Math.random().toString(16).substring(2, 66)}`
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Synapse SDK upload failed'
       };
-      
-      console.log('Returning mock result due to upload error:', mockResult);
-      return mockResult;
     }
   }
 
@@ -207,13 +189,12 @@ export class SynapseService {
     try {
       console.log('Verifying content payment via Synapse:', { userAddress, contentId, amount });
 
-      // For demo purposes, simulate payment verification
-      // In production, this would check actual USDFC transactions
-      
+      // Real USDFC payment verification needs implementation
+      // For now, return error to prevent simulated verification
       return {
-        success: true,
-        verified: true,
-        transactionHash: 'verified_via_synapse'
+        success: false,
+        verified: false,
+        error: 'Real USDFC payment verification not yet implemented - requires Synapse SDK payment verification methods'
       };
     } catch (error) {
       console.error('Failed to verify content payment:', error);

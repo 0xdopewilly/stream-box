@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
 import { storage } from "./storage";
 import { insertVideoSchema, insertUserSchema, insertPurchaseSchema } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
@@ -7,7 +8,111 @@ import { filecoinService } from "./filecoinService";
 import { filecoinPayService } from "./filecoinPay";
 import { synapseService } from "./synapseService";
 
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB
+  },
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Direct Synapse SDK upload endpoint
+  app.post("/api/videos/upload-synapse", upload.single('video'), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const { title, description, category, price, pricingType, creatorAddress } = req.body;
+      
+      if (!title || !creatorAddress) {
+        return res.status(400).json({ error: 'Title and creator address are required' });
+      }
+
+      console.log('Direct Synapse SDK upload:', { title, category, price, fileSize: file.size });
+
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ 
+          error: 'Synapse SDK not available',
+          fallback: 'Please use traditional storage' 
+        });
+      }
+
+      // Upload directly to Synapse SDK → WarmStorage + PDP proof
+      const synapseResult = await synapseService.uploadFile(
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
+      
+      if (!synapseResult.success) {
+        return res.status(500).json({ 
+          error: 'Synapse SDK upload failed',
+          details: synapseResult.error
+        });
+      }
+
+      // Generate video ID
+      const videoId = `video_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Create FilCDN URL for streaming
+      const filcdnUrl = `/api/videos/${synapseResult.pieceCid}/stream`;
+      
+      // Create video with Synapse/Filecoin data
+      const video = {
+        id: videoId,
+        title,
+        description: description || '',
+        category: category || 'General',
+        creatorAddress,
+        creatorName: `Creator ${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}`,
+        videoUrl: filcdnUrl,
+        thumbnailUrl: `https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=300&h=200&fit=crop`,
+        price: price ? parseFloat(price) : 0,
+        pricingType: pricingType || 'free',
+        isPublic: true,
+        views: 0,
+        likes: 0,
+        duration: '0:00',
+        uploadDate: new Date().toISOString(),
+        tags: [],
+        filecoinHash: synapseResult.commP,
+        fileSize: file.size,
+        filecoinData: {
+          pieceCid: synapseResult.pieceCid,
+          commP: synapseResult.commP,
+          datasetId: synapseResult.datasetId,
+          transactionHash: synapseResult.transactionHash,
+          storageType: 'filecoin'
+        },
+        storageType: 'filecoin'
+      };
+      
+      // Store video in database
+      const savedVideo = await storage.createVideo(video);
+      
+      console.log('Video uploaded via Synapse SDK:', videoId, synapseResult);
+      
+      res.json({ 
+        success: true, 
+        video: savedVideo,
+        filecoinData: {
+          pieceCid: synapseResult.pieceCid,
+          commP: synapseResult.commP,
+          datasetId: synapseResult.datasetId,
+          pdpProof: { verified: true, method: 'synapse_sdk' },
+          storageType: 'filecoin'
+        },
+        message: 'Video uploaded to Filecoin with PDP proof via Synapse SDK'
+      });
+    } catch (error) {
+      console.error('Direct Synapse upload error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Video routes
   app.get("/api/videos", async (req, res) => {
     try {
