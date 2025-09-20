@@ -201,8 +201,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (transactionHash) {
-        // Verify existing transaction
-        const verification = await filecoinPayService.hasPurchasedVideo(buyerAddress, req.params.id);
+        // Check for USDFC payment method and use Synapse SDK verification
+        const paymentMethod = req.body.paymentMethod;
+        let verification = false;
+        
+        if (paymentMethod === 'usdfc' && synapseService.isConnected()) {
+          console.log('Verifying USDFC payment via Synapse SDK...');
+          
+          try {
+            const verificationResult = await synapseService.verifyContentPayment(
+              buyerAddress,
+              req.params.id,
+              video.price
+            );
+            verification = verificationResult.verified;
+            
+            if (verification) {
+              console.log('USDFC payment verified via Synapse SDK');
+            } else {
+              console.log('USDFC verification failed:', verificationResult.error);
+            }
+          } catch (synapseError) {
+            console.error('Synapse payment verification error:', synapseError);
+            // Fall back to traditional verification
+            verification = await filecoinPayService.hasPurchasedVideo(buyerAddress, req.params.id);
+          }
+        } else {
+          // Traditional Filecoin payment verification
+          verification = await filecoinPayService.hasPurchasedVideo(buyerAddress, req.params.id);
+        }
         
         if (verification) {
           // Create purchase record
@@ -210,13 +237,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: buyerAddress,
             videoId: req.params.id,
             amount: video.price,
-            transactionHash
+            transactionHash,
+            paymentMethod: paymentMethod || 'filecoin'
           });
 
           return res.json({ 
             success: true, 
             purchase,
-            message: "Video purchase verified successfully"
+            paymentMethod: paymentMethod || 'filecoin',
+            message: paymentMethod === 'usdfc' 
+              ? "USDFC payment verified via Synapse SDK"
+              : "Video purchase verified successfully"
           });
         } else {
           return res.status(400).json({ error: "Transaction verification failed" });
