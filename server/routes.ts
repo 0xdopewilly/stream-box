@@ -70,12 +70,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         creatorName: `Creator ${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}`,
         videoUrl: filcdnUrl,
         thumbnailUrl: `https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=300&h=200&fit=crop`,
-        price: price ? parseFloat(price) : 0,
+        price: price ? price : "0",
         pricingType: pricingType || 'free',
         isPublic: true,
         views: 0,
         likes: 0,
-        duration: '0:00',
+        duration: 0,
         uploadDate: new Date().toISOString(),
         tags: [],
         filecoinHash: synapseResult.commP,
@@ -319,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               req.params.id,
               video.price
             );
-            verification = verificationResult.verified;
+            verification = verificationResult.verified ?? false;
             
             if (verification) {
               console.log('USDFC payment verified via Synapse SDK');
@@ -342,8 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: buyerAddress,
             videoId: req.params.id,
             amount: video.price,
-            transactionHash,
-            paymentMethod: paymentMethod || 'filecoin'
+            transactionHash
           });
 
           return res.json({ 
@@ -369,13 +368,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const transaction = filecoinPayService.createPaymentTransaction(paymentDetails);
         const gasCost = await filecoinPayService.estimateGasCost(paymentDetails);
         
+        console.log('Returning USDFC payment details for MetaMask:', {
+          videoId: req.params.id,
+          amount: video.price + ' USDFC',
+          creator: creatorAddress,
+          contract: filecoinPayService.getContractInfo()?.address,
+          transaction
+        });
+        
         return res.json({
           success: true,
           transaction,
           gasCost,
           videoPrice: video.price,
           creatorAddress,
-          contractAddress: filecoinPayService.getContractInfo()?.address
+          contractAddress: filecoinPayService.getContractInfo()?.address,
+          paymentToken: 'USDFC',
+          tokenAddress: '0x80b98d3aa09ffff255c3ba4a241111ff1262f045',
+          message: 'Payment will be processed via USDFC token transfer'
         });
       }
     } catch (error) {
@@ -445,14 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Update video with Synapse/Filecoin information
               const updatedVideo = await storage.updateVideo(req.params.id, {
-                videoUrl: filcdnUrl,
-                filecoinData: {
-                  pieceCid: synapseResult.pieceCid,
-                  commP: synapseResult.commP,
-                  datasetId: synapseResult.datasetId,
-                  transactionHash: synapseResult.transactionHash,
-                  storageType: 'filecoin'
-                }
+                videoUrl: filcdnUrl
               });
 
               if (!updatedVideo) {

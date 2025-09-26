@@ -60,7 +60,15 @@ export function useFilecoinPay() {
         throw new Error('Failed to get transaction details');
       }
 
-      const { transaction, gasCost, videoPrice, creatorAddress, contractAddress } = await response.json();
+      const { transaction, gasCost, videoPrice, creatorAddress, contractAddress, paymentToken, tokenAddress, message } = await response.json();
+      
+      console.log('USDFC payment details received:', {
+        paymentToken: paymentToken || 'USDFC',
+        tokenAddress,
+        amount: videoPrice,
+        creator: creatorAddress,
+        message
+      });
       
       console.log('Smart contract purchase:', {
         videoId: paymentDetails.videoId,
@@ -82,13 +90,14 @@ export function useFilecoinPay() {
       const gasCostWei = ethers.parseEther(gasCost);
       const totalCostWei = transactionValueWei + gasCostWei;
       
-      if (balanceWei < totalCostWei) {
-        throw new Error(`Insufficient FIL balance. Need ${ethers.formatEther(totalCostWei)} FIL`);
+      // For USDFC token payments, we only need FIL for gas
+      if (balanceWei < gasCostWei) {
+        throw new Error(`Insufficient FIL for gas. Need ${ethers.formatEther(gasCostWei)} FIL for transaction fees`);
       }
 
       toast({
-        title: "Processing payment...",
-        description: `Purchasing video for ${videoPrice} FIL via smart contract`,
+        title: "Processing USDFC payment...",
+        description: `Purchasing video for ${videoPrice} USDFC via token transfer`,
       });
 
       // Send transaction through smart contract

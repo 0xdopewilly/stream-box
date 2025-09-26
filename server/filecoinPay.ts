@@ -37,27 +37,28 @@ export class FilecoinPayService {
 
   private async initializeContract() {
     try {
-      // For now, use a mock contract setup
-      // In production, you'd deploy the actual smart contract
+      // Use real USDFC contract address for payments
       this.contractInfo = {
-        address: "0x" + Math.random().toString(16).substring(2, 42), // Mock contract address
+        address: "0x80b98d3aa09ffff255c3ba4a241111ff1262f045", // Real USDFC contract
         abi: [
-          "function listVideo(string memory videoId, uint256 price) external",
-          "function purchaseVideo(string memory videoId) external payable",
-          "function hasPurchased(address buyer, string memory videoId) external view returns (bool)",
-          "function getVideoPrice(string memory videoId) external view returns (uint256)",
-          "function getVideoCreator(string memory videoId) external view returns (address)",
-          "function getCreatorEarnings(address creator) external view returns (uint256)",
-          "event VideoPurchased(bytes32 indexed purchaseId, address indexed buyer, address indexed creator, string videoId, uint256 amount)",
-          "event CreatorPaid(address indexed creator, uint256 amount)",
-          "event VideoListed(string indexed videoId, address indexed creator, uint256 price)"
+          // USDFC ERC20 standard methods for payments
+          "function transfer(address to, uint256 amount) external returns (bool)",
+          "function transferFrom(address from, address to, uint256 amount) external returns (bool)",
+          "function approve(address spender, uint256 amount) external returns (bool)",
+          "function balanceOf(address account) external view returns (uint256)",
+          "function allowance(address owner, address spender) external view returns (uint256)",
+          "function decimals() external view returns (uint8)",
+          "function symbol() external view returns (string)",
+          "function name() external view returns (string)",
+          "event Transfer(address indexed from, address indexed to, uint256 value)",
+          "event Approval(address indexed owner, address indexed spender, uint256 value)"
         ],
         deployed: true
       };
-      console.log('StreamBox payment contract initialized:', this.contractInfo.address);
+      console.log('USDFC contract initialized:', this.contractInfo.address);
       console.log('Creator payments will go to:', process.env.CREATOR_WALLET_ADDRESS);
     } catch (error) {
-      console.error('Failed to initialize contract:', error);
+      console.error('Failed to initialize USDFC contract:', error);
     }
   }
 
@@ -88,7 +89,7 @@ export class FilecoinPayService {
   }
 
   /**
-   * Process video purchase payment through smart contract
+   * Process video purchase payment through USDFC token transfer
    */
   async processPayment(details: PaymentDetails): Promise<TransactionResult> {
     try {
@@ -102,49 +103,48 @@ export class FilecoinPayService {
       if (!this.contractInfo || !this.contractInfo.deployed) {
         return {
           success: false,
-          error: "Payment contract not deployed. Please try again later."
+          error: "USDFC contract not available. Please try again later."
         };
       }
 
-      // Convert FIL amount to wei (18 decimals)
-      const amountInWei = ethers.parseEther(details.amount);
+      // Convert USD amount to USDFC tokens (assuming 6 decimals for USDFC)
+      const usdcDecimals = 6; // USDFC uses 6 decimals like USDC
+      const amountInTokens = ethers.parseUnits(details.amount, usdcDecimals);
       
-      // Create contract instance
-      const contract = new ethers.Contract(
+      // Create USDFC contract instance
+      const usdcContract = new ethers.Contract(
         this.contractInfo.address,
         this.contractInfo.abi,
         this.signer
       );
 
-      console.log('Processing video purchase:', {
+      console.log('Processing USDFC payment:', {
         buyer: await this.signer.getAddress(),
         creator: details.recipient,
-        amount: details.amount + ' FIL',
+        amount: details.amount + ' USDFC',
         videoId: details.videoId,
         contract: this.contractInfo.address
       });
 
-      // Call smart contract to purchase video
-      const txResponse = await contract.purchaseVideo(details.videoId, {
-        value: amountInWei,
-        gasLimit: 150000 // Higher gas limit for contract interaction
+      // Check user's USDFC balance
+      const balance = await usdcContract.balanceOf(await this.signer.getAddress());
+      if (balance < amountInTokens) {
+        return {
+          success: false,
+          error: `Insufficient USDFC balance. Need ${details.amount} USDFC, have ${ethers.formatUnits(balance, usdcDecimals)}`
+        };
+      }
+
+      // Transfer USDFC tokens to creator
+      const txResponse = await usdcContract.transfer(details.recipient, amountInTokens, {
+        gasLimit: 100000 // Standard ERC20 transfer gas limit
       });
       
-      console.log('Purchase transaction sent:', txResponse.hash);
+      console.log('USDFC transfer transaction sent:', txResponse.hash);
 
       // Wait for confirmation
       const receipt = await txResponse.wait();
-      console.log('Purchase confirmed:', receipt);
-
-      // Extract events from receipt
-      const purchaseEvent = receipt.logs.find((log: any) => {
-        try {
-          const parsed = contract.interface.parseLog(log);
-          return parsed?.name === 'VideoPurchased';
-        } catch {
-          return false;
-        }
-      });
+      console.log('USDFC transfer confirmed:', receipt);
 
       return {
         success: true,
@@ -155,10 +155,10 @@ export class FilecoinPayService {
       };
 
     } catch (error: any) {
-      console.error('Payment processing failed:', error);
+      console.error('USDFC payment failed:', error);
       return {
         success: false,
-        error: error.message || 'Payment failed. Please try again.'
+        error: error.message || 'USDFC payment failed. Please try again.'
       };
     }
   }
@@ -281,12 +281,12 @@ export class FilecoinPayService {
   }
 
   /**
-   * Get estimated gas cost for a video purchase
+   * Get estimated gas cost for USDFC token transfer
    */
   async estimateGasCost(details: PaymentDetails): Promise<string> {
     try {
       const gasPrice = await this.provider.getFeeData();
-      const gasLimit = 150000; // Contract interaction gas limit
+      const gasLimit = 100000; // ERC20 transfer gas limit
       
       const gasCostWei = BigInt(gasLimit) * BigInt(gasPrice.gasPrice?.toString() || '0');
       const gasCostFil = ethers.formatEther(gasCostWei);
@@ -294,33 +294,38 @@ export class FilecoinPayService {
       return gasCostFil;
     } catch (error) {
       console.error('Gas estimation failed:', error);
-      return '0.005'; // Fallback estimate for contract interaction
+      return '0.002'; // Fallback estimate for ERC20 transfer
     }
   }
 
   /**
-   * Create payment transaction for MetaMask
+   * Create USDFC payment transaction for MetaMask
    */
   createPaymentTransaction(details: PaymentDetails) {
     if (!this.contractInfo) {
-      throw new Error('Contract not initialized');
+      throw new Error('USDFC contract not initialized');
     }
 
-    const amountWei = ethers.parseEther(details.amount);
+    // Convert USD amount to USDFC tokens (6 decimals)
+    const usdcDecimals = 6;
+    const amountInTokens = ethers.parseUnits(details.amount, usdcDecimals);
     const contract = new ethers.Contract(
       this.contractInfo.address,
       this.contractInfo.abi,
       this.provider
     );
 
-    // Create transaction data for purchaseVideo function call
-    const txData = contract.interface.encodeFunctionData('purchaseVideo', [details.videoId]);
+    // Create transaction data for USDFC transfer to creator
+    const txData = contract.interface.encodeFunctionData('transfer', [
+      details.recipient,
+      amountInTokens
+    ]);
 
     return {
       to: this.contractInfo.address,
-      value: `0x${amountWei.toString(16)}`,
+      value: '0x0', // No ETH value needed for token transfer
       data: txData,
-      gasLimit: '0x24F40' // 150000 in hex
+      gasLimit: '0x186A0' // 100000 in hex for ERC20 transfer
     };
   }
 
