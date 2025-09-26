@@ -113,6 +113,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // FilCDN streaming endpoint for Filecoin-stored videos (with access control)
+  app.get("/api/videos/:pieceCid/stream", async (req, res) => {
+    try {
+      const { pieceCid } = req.params;
+      const { token, videoId, buyerAddress } = req.query;
+      
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ error: 'FilCDN service not available' });
+      }
+
+      // SECURITY: Verify access before streaming
+      if (!buyerAddress || !videoId) {
+        return res.status(401).json({ error: 'Access token required' });
+      }
+
+      // Check if user has purchased this video
+      const video = await storage.getVideo(videoId as string);
+      if (!video) {
+        return res.status(404).json({ error: 'Video not found' });
+      }
+
+      // For paid content, verify purchase
+      if (video.pricingType === 'payper' && parseFloat(video.price || '0') > 0) {
+        console.log('Verifying purchase for paid content:', { videoId, buyerAddress, price: video.price });
+        
+        // Check purchase in database first
+        const purchase = await storage.getPurchase(buyerAddress as string, videoId as string);
+        if (!purchase) {
+          return res.status(403).json({ error: 'Purchase required to access this content' });
+        }
+        
+        console.log('Purchase verified, allowing access to:', videoId);
+      }
+
+      console.log('Streaming video via FilCDN:', { pieceCid, videoId, authorized: true });
+
+      // Use Synapse SDK to retrieve video from FilCDN
+      const retrievalResult = await synapseService.retrieveFile(pieceCid);
+      
+      if (!retrievalResult.success || !retrievalResult.data) {
+        return res.status(404).json({ error: 'Video not found on Filecoin network' });
+      }
+
+      const videoData = retrievalResult.data;
+      const mimeType = retrievalResult.mimeType || 'video/mp4';
+      const contentLength = videoData.byteLength;
+
+      // Handle HTTP range requests for video streaming
+      const range = req.headers.range;
+      
+      if (range) {
+        // Parse range header (e.g., "bytes=0-1023")
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : contentLength - 1;
+        const chunkSize = (end - start) + 1;
+        
+        // Create partial content response
+        const chunk = videoData.slice(start, end + 1);
+        
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${contentLength}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': mimeType,
+          'Cache-Control': 'public, max-age=31536000', // 1 year cache for Filecoin content
+          'X-Filecoin-Storage': 'true',
+          'X-FilCDN-Optimized': 'true'
+        });
+        
+        res.end(Buffer.from(chunk));
+      } else {
+        // Send entire video file
+        res.writeHead(200, {
+          'Content-Length': contentLength,
+          'Content-Type': mimeType,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000', // 1 year cache for Filecoin content
+          'X-Filecoin-Storage': 'true',
+          'X-FilCDN-Optimized': 'true'
+        });
+        
+        res.end(Buffer.from(videoData));
+      }
+
+      console.log('Video streamed successfully via FilCDN:', {
+        pieceCid,
+        contentLength,
+        hasRange: !!range,
+        mimeType
+      });
+    } catch (error) {
+      console.error('FilCDN streaming error:', error);
+      res.status(500).json({ error: 'Streaming failed' });
+    }
+  });
+
   // Video routes
   app.get("/api/videos", async (req, res) => {
     try {

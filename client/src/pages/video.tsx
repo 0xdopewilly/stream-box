@@ -37,7 +37,22 @@ export default function VideoPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { processPayment, isProcessing } = useFilecoinPay();
-  const { isConnected, connectWallet } = useWallet();
+  const { isConnected, connectWallet, address } = useWallet();
+
+  // Generate authenticated video URL for secure FilCDN streaming
+  const getAuthenticatedVideoUrl = (video: Video): string => {
+    // For FilCDN streams (Filecoin-stored videos), add authentication parameters
+    if (video.videoUrl?.includes('/stream')) {
+      const params = new URLSearchParams({
+        videoId: video.id,
+        buyerAddress: address || 'anonymous'
+      });
+      return `${video.videoUrl}?${params.toString()}`;
+    }
+    
+    // Return original URL for traditional storage
+    return video.videoUrl;
+  };
 
   const { data: video, isLoading } = useQuery<Video>({
     queryKey: ["/api/videos", id],
@@ -195,7 +210,7 @@ export default function VideoPage() {
           {/* Video Player */}
           <div className="mb-12">
             <VideoPlayer
-              videoUrl={video.videoUrl}
+              videoUrl={getAuthenticatedVideoUrl(video)}
               title={video.title}
               description={video.description}
               thumbnailUrl={video.thumbnailUrl}
