@@ -25,22 +25,32 @@ export function useSynapsePayment() {
     setError(null);
     
     try {
-      console.log('Initiating USDFC deposit:', ethers.formatUnits(amount, 18), 'USDFC');
+      console.log('🔄 Initiating USDFC deposit:', ethers.formatUnits(amount, 18), 'USDFC');
+      console.log('Calling API: POST /api/synapse/deposit');
       
       const response = await apiRequest('POST', '/api/synapse/deposit', { amount });
-      const result = await response.json();
+      console.log('API response status:', response.status);
       
-      if (!result.success) {
-        throw new Error(result.details || 'Deposit failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error response:', errorData);
+        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}: Deposit failed`);
       }
       
-      console.log('✓ USDFC deposit successful:', result.transactionHash);
+      const result = await response.json();
+      console.log('API response data:', result);
+      
+      if (!result.success) {
+        throw new Error(result.details || result.error || 'Deposit failed');
+      }
+      
+      console.log('✅ USDFC deposit successful! TX:', result.transactionHash);
       setStatus(prev => ({ ...prev, deposited: true }));
       
       return { success: true, transactionHash: result.transactionHash };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Deposit failed';
-      console.error('Deposit error:', errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Deposit failed - Unknown error';
+      console.error('❌ Deposit error:', errorMessage, err);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -56,28 +66,38 @@ export function useSynapsePayment() {
     setError(null);
     
     try {
-      console.log('Initiating service approval...', {
+      console.log('🔄 Initiating service approval...', {
         rate: ethers.formatUnits(rateAllowance, 18),
         lockup: ethers.formatUnits(lockupAllowance, 18)
       });
+      console.log('Calling API: POST /api/synapse/approve');
       
       const response = await apiRequest('POST', '/api/synapse/approve', {
         rateAllowance,
         lockupAllowance
       });
-      const result = await response.json();
+      console.log('API response status:', response.status);
       
-      if (!result.success) {
-        throw new Error(result.details || 'Approval failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error response:', errorData);
+        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}: Approval failed`);
       }
       
-      console.log('✓ Service approval successful:', result.transactionHash);
+      const result = await response.json();
+      console.log('API response data:', result);
+      
+      if (!result.success) {
+        throw new Error(result.details || result.error || 'Approval failed');
+      }
+      
+      console.log('✅ Service approval successful! TX:', result.transactionHash);
       setStatus(prev => ({ ...prev, approved: true, ready: true }));
       
       return { success: true, transactionHash: result.transactionHash };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Approval failed';
-      console.error('Approval error:', errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Approval failed - Unknown error';
+      console.error('❌ Approval error:', errorMessage, err);
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
