@@ -4,6 +4,18 @@
 
 StreamBox is a decentralized video streaming platform that empowers creators with tamper-proof storage and direct monetization capabilities. Built with modern web technologies, the platform leverages Filecoin for decentralized storage, providing content verification and creator-owned infrastructure. Users can upload, stream, and monetize video content through various pricing models including free content, pay-per-view, and subscription-based access.
 
+## Recent Changes (October 3, 2025)
+
+### Synapse SDK Payment Integration
+- **Added Payment Setup UI**: Implemented three-step payment flow (Deposit USDFC → Approve Service → Upload Ready)
+- **Backend Payment APIs**: Created `/api/synapse/deposit`, `/api/synapse/approve`, `/api/synapse/preflight`, `/api/synapse/balance` endpoints
+- **Payment Hook**: Added `useSynapsePayment` hook with detailed error logging for debugging
+- **Known Issue**: Synapse SDK v1.x has hardcoded incorrect USDFC contract address (`0xb3042734...cDf0`) that doesn't exist on Calibration network
+  - **Correct Address**: `0x80b98d3aa09ffff255c3ba4a241111ff1262f045`
+  - **Workaround**: Added "Skip Payment Setup" button to proceed directly to upload
+  - **Get Test USDFC**: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc
+- **Payment Flow**: Currently processes transactions via backend creator wallet (0x2D3AfFD88f17ba3Bf895E23c820f646b69F7D3cb)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

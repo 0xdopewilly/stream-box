@@ -185,6 +185,28 @@ export function SynapsePaymentSetup({ onComplete, estimatedFileSize = 100 * 1024
       )}
 
       <div className="mt-6 space-y-3">
+        <Alert className="bg-red-500/10 border-red-500/20">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <AlertDescription className="text-sm">
+            <strong className="text-red-600 dark:text-red-400">SDK Configuration Issue:</strong> The Synapse SDK's hardcoded USDFC contract address (<code>0xb3042734...cDf0</code>) doesn't exist on Calibration network.
+            <br /><br />
+            <strong>Correct USDFC Contract:</strong> <code className="text-xs">0x80b98d3aa09ffff255c3ba4a241111ff1262f045</code>
+            <br />
+            <strong>Get Test USDFC:</strong> <a href="https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc" target="_blank" rel="noopener noreferrer" className="underline text-blue-500">Calibration USDFC Faucet</a>
+            <br /><br />
+            Until the SDK is updated, you can skip payment setup and proceed directly to upload.
+          </AlertDescription>
+        </Alert>
+
+        <Button
+          onClick={onComplete}
+          variant="outline"
+          className="w-full"
+          data-testid="button-skip-payment"
+        >
+          Skip Payment Setup & Continue to Upload
+        </Button>
+
         <div className="p-4 bg-muted/50 rounded-lg">
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 mt-0.5 text-primary" />
@@ -195,15 +217,6 @@ export function SynapsePaymentSetup({ onComplete, estimatedFileSize = 100 * 1024
             </div>
           </div>
         </div>
-
-        <Alert className="bg-yellow-500/10 border-yellow-500/20">
-          <Wallet className="h-4 w-4 text-yellow-500" />
-          <AlertDescription className="text-sm text-yellow-700 dark:text-yellow-400">
-            <strong>Current Implementation:</strong> Payment transactions are currently processed via backend wallet for infrastructure management. 
-            For production, this would integrate with MetaMask to trigger user wallet prompts for USDFC deposits and approvals.
-            The Synapse SDK supports both server-side (platform-managed) and client-side (user MetaMask) transaction flows.
-          </AlertDescription>
-        </Alert>
       </div>
     </Card>
   );
