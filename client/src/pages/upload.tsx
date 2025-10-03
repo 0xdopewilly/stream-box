@@ -4,6 +4,7 @@ import { CloudUpload, Shield, Wallet, AlertTriangle } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { SynapsePaymentSetup } from "@/components/SynapsePaymentSetup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,8 @@ export default function Upload() {
   });
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
+  const [showPaymentSetup, setShowPaymentSetup] = useState(false);
+  const [paymentSetupComplete, setPaymentSetupComplete] = useState(false);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -376,6 +379,38 @@ export default function Upload() {
             
             <form onSubmit={handleSubmit}>
               <Card className="bg-card rounded-xl p-8 border">
+                {/* Payment Setup for Filecoin Storage */}
+                {formData.storageType === 'filecoin' && !paymentSetupComplete && (
+                  <div className="mb-8">
+                    <Alert className="mb-6 bg-blue-500/10 border-blue-500/20">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <AlertDescription className="text-sm">
+                        <strong>Filecoin WarmStorage Payment Setup Required:</strong> Before uploading to decentralized storage, 
+                        you need to deposit USDFC tokens and approve the Synapse SDK storage service. 
+                        This enables tamper-proof storage with PDP proofs and FilCDN optimization.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    {!showPaymentSetup ? (
+                      <div className="text-center">
+                        <Button
+                          onClick={() => setShowPaymentSetup(true)}
+                          size="lg"
+                          className="bg-primary hover:bg-primary/90"
+                          data-testid="button-start-payment-setup"
+                        >
+                          <Wallet className="w-5 h-5 mr-2" />
+                          Start Payment Setup
+                        </Button>
+                      </div>
+                    ) : (
+                      <SynapsePaymentSetup 
+                        onComplete={() => setPaymentSetupComplete(true)}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* File Upload Section */}
                 <div className="mb-8">
                   <Label className="text-lg font-semibold mb-4 block">Upload Video File</Label>
