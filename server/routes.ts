@@ -113,6 +113,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Payment setup: Deposit USDFC tokens for storage
+  app.post("/api/synapse/deposit", async (req, res) => {
+    try {
+      const { amount } = req.body;
+      
+      if (!amount) {
+        return res.status(400).json({ error: 'Amount is required' });
+      }
+
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ 
+          error: 'Synapse SDK not available',
+          message: 'Payment service unavailable' 
+        });
+      }
+
+      console.log('Processing USDFC deposit:', amount);
+      const result = await synapseService.depositTokens(amount);
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: 'Deposit failed',
+          details: result.error
+        });
+      }
+
+      res.json({
+        success: true,
+        transactionHash: result.transactionHash,
+        message: 'USDFC tokens deposited successfully'
+      });
+    } catch (error) {
+      console.error('Deposit error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Payment setup: Approve storage service for automated payments
+  app.post("/api/synapse/approve", async (req, res) => {
+    try {
+      const { rateAllowance, lockupAllowance } = req.body;
+      
+      if (!rateAllowance || !lockupAllowance) {
+        return res.status(400).json({ error: 'Rate and lockup allowances are required' });
+      }
+
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ 
+          error: 'Synapse SDK not available',
+          message: 'Payment service unavailable' 
+        });
+      }
+
+      console.log('Approving storage service:', { rateAllowance, lockupAllowance });
+      const result = await synapseService.approveStorageService(rateAllowance, lockupAllowance);
+
+      if (!result.success) {
+        return res.status(400).json({ 
+          error: 'Approval failed',
+          details: result.error
+        });
+      }
+
+      res.json({
+        success: true,
+        transactionHash: result.transactionHash,
+        message: 'Storage service approved successfully'
+      });
+    } catch (error) {
+      console.error('Approval error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Preflight check: Verify user has sufficient allowances before upload
+  app.post("/api/synapse/preflight", async (req, res) => {
+    try {
+      const { dataSize } = req.body;
+      
+      if (!dataSize) {
+        return res.status(400).json({ error: 'Data size is required' });
+      }
+
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ 
+          error: 'Synapse SDK not available',
+          message: 'Payment service unavailable' 
+        });
+      }
+
+      console.log('Running preflight check for', dataSize, 'bytes');
+      const result = await synapseService.preflightUpload(dataSize);
+
+      res.json({
+        sufficient: result.sufficient,
+        costs: result.costs,
+        error: result.error,
+        message: result.sufficient ? 'Ready to upload' : 'Additional payment setup required'
+      });
+    } catch (error) {
+      console.error('Preflight check error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Get balance information
+  app.get("/api/synapse/balance", async (req, res) => {
+    try {
+      if (!synapseService.isConnected()) {
+        return res.status(503).json({ 
+          error: 'Synapse SDK not available',
+          message: 'Balance service unavailable' 
+        });
+      }
+
+      const balanceInfo = await synapseService.getBalanceInfo();
+      res.json(balanceInfo);
+    } catch (error) {
+      console.error('Balance check error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // FilCDN streaming endpoint for Filecoin-stored videos (with access control)
   app.get("/api/videos/:pieceCid/stream", async (req, res) => {
     try {
