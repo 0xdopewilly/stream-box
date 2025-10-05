@@ -26,6 +26,7 @@ interface VideoFormData {
   pricingType: 'free' | 'payper' | 'subscription';
   price: string;
   storageType: 'traditional' | 'filecoin';
+  duration?: number;
 }
 
 export default function Upload() {
@@ -41,6 +42,7 @@ export default function Upload() {
   const [isUploading, setIsUploading] = useState(false);
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
   const [paymentSetupComplete, setPaymentSetupComplete] = useState(false);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -119,6 +121,38 @@ export default function Upload() {
     } catch (error) {
       console.error("Error getting upload parameters:", error);
       throw error;
+    }
+  };
+
+  // Extract video duration from file
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        const duration = Math.floor(video.duration);
+        resolve(duration);
+      };
+      
+      video.onerror = () => {
+        reject(new Error('Failed to load video metadata'));
+      };
+      
+      video.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileSelected = async (file: File) => {
+    setVideoFile(file);
+    
+    try {
+      const duration = await getVideoDuration(file);
+      setFormData(prev => ({ ...prev, duration }));
+      console.log('Video duration extracted:', duration, 'seconds');
+    } catch (error) {
+      console.error('Failed to extract video duration:', error);
     }
   };
 
@@ -214,6 +248,7 @@ export default function Upload() {
           pricingType: formData.pricingType,
           videoUrl: uploadedVideoUrl || "/temp",
           creatorId: address,
+          duration: formData.duration || 0,
         };
 
         const createdVideo = await createVideoMutation.mutateAsync(videoData);
@@ -235,6 +270,7 @@ export default function Upload() {
           pricingType: formData.pricingType,
           videoUrl: "/temp",
           creatorId: address,
+          duration: formData.duration || 0,
         };
 
         const createdVideo = await createVideoMutation.mutateAsync(videoData);
