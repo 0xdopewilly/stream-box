@@ -84,6 +84,26 @@ export function useFilecoinPay() {
         throw new Error("MetaMask not available");
       }
 
+      // Add USDFC token to MetaMask if not already added
+      try {
+        await ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: tokenAddress,
+              symbol: 'USDFC',
+              decimals: 6,
+              image: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+            },
+          },
+        });
+        console.log('USDFC token added to MetaMask');
+      } catch (addTokenError) {
+        // User rejected or token already exists, continue anyway
+        console.log('USDFC token add request:', addTokenError);
+      }
+
       // Check if user has sufficient FIL balance for gas
       const balance = await ethereum.request({ method: 'eth_getBalance', params: [address, 'latest'] });
       const balanceWei = BigInt(balance);
@@ -129,6 +149,16 @@ export function useFilecoinPay() {
           throw balanceError; // Re-throw if it's our insufficient balance error
         }
       }
+
+      // Log transaction details for debugging
+      console.log('📤 Sending USDFC payment transaction:', {
+        tokenContract: transaction.to,
+        amount: `${videoPrice} USDFC`,
+        recipient: creatorAddress,
+        nativeValue: transaction.value + ' (0 FIL - this is a token transfer)',
+        gasLimit: transaction.gasLimit,
+        note: 'MetaMask should show this as a USDFC token transfer'
+      });
 
       toast({
         title: "Processing USDFC payment...",

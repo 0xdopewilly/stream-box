@@ -129,6 +129,12 @@ export default function VideoPage() {
       address
     });
     
+    // Show informative toast about the payment process
+    toast({
+      title: "Preparing payment...",
+      description: `You'll be asked to approve a ${video.price} USDFC token transfer to the creator`,
+    });
+    
     try {
       const paymentResult = await processPayment({
         amount: video.price,
