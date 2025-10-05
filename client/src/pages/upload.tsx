@@ -455,18 +455,45 @@ export default function Upload() {
                       <div>
                         <CloudUpload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-xl font-semibold mb-2">Drop your video files here</h3>
-                        <p className="text-muted-foreground mb-4">or click to browse from your device</p>
-                        <ObjectUploader
-                          maxNumberOfFiles={1}
-                          maxFileSize={5368709120} // 5GB
-                          onGetUploadParameters={handleGetUploadParameters}
-                          onComplete={handleUploadComplete}
-                        >
-                          <div className="flex items-center gap-2">
-                            <CloudUpload className="h-5 w-5" />
-                            <span>Choose Video File</span>
-                          </div>
-                        </ObjectUploader>
+                        <p className="text-muted-foreground mb-4">
+                          {formData.duration ? `Duration: ${Math.floor(formData.duration / 60)}:${(formData.duration % 60).toString().padStart(2, '0')}` : 'or click to browse from your device'}
+                        </p>
+                        
+                        {/* Hidden file input for duration extraction */}
+                        <input
+                          type="file"
+                          id="video-duration-input"
+                          accept="video/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              await handleFileSelected(file);
+                            }
+                          }}
+                        />
+                        
+                        <div className="flex gap-3 justify-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('video-duration-input')?.click()}
+                            data-testid="button-extract-duration"
+                          >
+                            Extract Duration
+                          </Button>
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={5368709120} // 5GB
+                            onGetUploadParameters={handleGetUploadParameters}
+                            onComplete={handleUploadComplete}
+                          >
+                            <div className="flex items-center gap-2">
+                              <CloudUpload className="h-5 w-5" />
+                              <span>Upload File</span>
+                            </div>
+                          </ObjectUploader>
+                        </div>
                         <div className="mt-4 text-sm text-muted-foreground">
                           Supported formats: MP4, MOV, AVI • Max size: 5GB
                         </div>
@@ -474,12 +501,12 @@ export default function Upload() {
                     ) : (
                       <div className="flex items-center justify-center space-x-4" data-testid="upload-success">
                         <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <i className="fas fa-check text-white"></i>
+                          <CloudUpload className="h-6 w-6 text-white" />
                         </div>
                         <div className="text-left">
                           <h4 className="font-semibold text-green-500">Video uploaded successfully!</h4>
                           <p className="text-sm text-muted-foreground">
-                            Your video is stored on {formData.storageType === 'filecoin' ? 'Filecoin with PDP proof' : 'cloud storage'}
+                            {formData.duration ? `Duration: ${Math.floor(formData.duration / 60)}:${(formData.duration % 60).toString().padStart(2, '0')}` : 'Your video is ready'}
                           </p>
                         </div>
                       </div>

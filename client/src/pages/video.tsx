@@ -97,13 +97,21 @@ export default function VideoPage() {
   });
 
   const handlePurchase = async () => {
-    if (!video) return;
+    console.log('🎬 Watch Now button clicked!', { video: video?.id, isConnected, address });
+    
+    if (!video) {
+      console.log('❌ No video found');
+      return;
+    }
 
     // Check wallet connection first
     if (!isConnected) {
+      console.log('💼 Wallet not connected, attempting to connect...');
       try {
         await connectWallet();
+        console.log('✅ Wallet connected successfully');
       } catch (error) {
+        console.error('❌ Wallet connection failed:', error);
         toast({
           title: "Wallet connection required",
           description: "Please connect your MetaMask wallet to make a purchase.",
@@ -114,6 +122,13 @@ export default function VideoPage() {
     }
 
     // Process real Filecoin payment
+    console.log('💰 Initiating payment...', {
+      amount: video.price,
+      videoId: video.id,
+      isConnected,
+      address
+    });
+    
     try {
       const paymentResult = await processPayment({
         amount: video.price,
@@ -121,6 +136,8 @@ export default function VideoPage() {
         videoId: video.id,
         purchaseType: 'single'
       });
+      
+      console.log('Payment result:', paymentResult);
 
       if (paymentResult.success) {
         if (paymentResult.transactionHash) {
