@@ -60,10 +60,19 @@ export function useWallet() {
     };
   });
 
+  // Clear any stuck connecting state on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && wallet.isConnecting) {
+      setWallet(prev => ({ ...prev, isConnecting: false }));
+    }
+  }, []);
+
   // Save wallet state to localStorage whenever it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('streambox_wallet', JSON.stringify(wallet));
+      // Never save isConnecting state
+      const stateToSave = { ...wallet, isConnecting: false };
+      localStorage.setItem('streambox_wallet', JSON.stringify(stateToSave));
     }
   }, [wallet]);
 
