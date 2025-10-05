@@ -40,7 +40,12 @@ export function useWallet() {
       const savedWallet = localStorage.getItem('streambox_wallet');
       if (savedWallet) {
         try {
-          return JSON.parse(savedWallet);
+          const parsed = JSON.parse(savedWallet);
+          // Never restore isConnecting state - it should always start as false
+          return {
+            ...parsed,
+            isConnecting: false,
+          };
         } catch (e) {
           console.error('Failed to parse saved wallet state:', e);
         }
