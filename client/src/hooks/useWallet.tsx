@@ -125,9 +125,14 @@ export function useWallet() {
     setWallet(prev => ({ ...prev, isConnecting: true }));
     
     try {
-      // Check if MetaMask is installed
+      // Check if MetaMask is installed and get the correct provider
       if (typeof window !== 'undefined' && (window as any).ethereum) {
-        const ethereum = (window as any).ethereum;
+        let ethereum = (window as any).ethereum;
+        
+        // If multiple wallets are installed, find MetaMask specifically
+        if (ethereum.providers?.length) {
+          ethereum = ethereum.providers.find((p: any) => p.isMetaMask) || ethereum.providers[0];
+        }
         
         // Request account access
         const accounts = await ethereum.request({
