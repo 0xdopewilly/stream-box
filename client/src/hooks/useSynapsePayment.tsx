@@ -34,7 +34,13 @@ export function useSynapsePayment() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('API error response:', errorData);
-        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}: Deposit failed`);
+        
+        // If it's the known SDK issue, show the helpful message
+        if (errorData.sdkIssue && errorData.details) {
+          throw new Error(errorData.details);
+        }
+        
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}: Deposit failed`);
       }
       
       const result = await response.json();

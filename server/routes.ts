@@ -133,9 +133,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await synapseService.depositTokens(amount);
 
       if (!result.success) {
+        const errorMsg = result.error || 'Unknown error';
+        
+        // Check if it's the known SDK contract address issue
+        if (errorMsg.includes('CALL_EXCEPTION') || errorMsg.includes('revert')) {
+          return res.status(400).json({ 
+            error: 'Deposit failed',
+            details: 'Synapse SDK v1.x has a known issue with the USDFC contract address on Calibration network. ' +
+                     'Please use the "Skip Payment Setup" button to proceed directly to upload. ' +
+                     'The correct USDFC address is: 0x80b98d3aa09ffff255c3ba4a241111ff1262f045. ' +
+                     'Get test USDFC: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc',
+            sdkIssue: true
+          });
+        }
+        
         return res.status(400).json({ 
           error: 'Deposit failed',
-          details: result.error
+          details: errorMsg
         });
       }
 
@@ -144,9 +158,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transactionHash: result.transactionHash,
         message: 'USDFC tokens deposited successfully'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Deposit error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      
+      // Provide helpful error message for the SDK contract issue
+      const errorMsg = error.message || 'Unknown error';
+      if (errorMsg.includes('CALL_EXCEPTION') || errorMsg.includes('revert')) {
+        return res.status(400).json({ 
+          error: 'Deposit failed',
+          details: 'Synapse SDK v1.x has a known issue with the USDFC contract address on Calibration network. ' +
+                   'Please use the "Skip Payment Setup" button to proceed directly to upload. ' +
+                   'The correct USDFC address is: 0x80b98d3aa09ffff255c3ba4a241111ff1262f045. ' +
+                   'Get test USDFC: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc',
+          sdkIssue: true
+        });
+      }
+      
+      res.status(500).json({ 
+        error: 'Internal server error',
+        details: errorMsg
+      });
     }
   });
 
@@ -585,32 +616,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           buyerAddress
         };
 
-        const transaction = filecoinPayService.createPaymentTransaction(paymentDetails);
-        const gasCost = await filecoinPayService.estimateGasCost(paymentDetails);
-        
-        console.log('Returning USDFC payment details for MetaMask:', {
-          videoId: req.params.id,
-          amount: video.price + ' USDFC',
-          creator: creatorAddress,
-          contract: filecoinPayService.getContractInfo()?.address,
-          transaction
-        });
-        
-        return res.json({
-          success: true,
-          transaction,
-          gasCost,
-          videoPrice: video.price,
-          creatorAddress,
-          contractAddress: filecoinPayService.getContractInfo()?.address,
-          paymentToken: 'USDFC',
-          tokenAddress: '0x80b98d3aa09ffff255c3ba4a241111ff1262f045',
-          message: 'Payment will be processed via USDFC token transfer'
-        });
+        try {
+          const transaction = filecoinPayService.createPaymentTransaction(paymentDetails);
+          const gasCost = await filecoinPayService.estimateGasCost(paymentDetails);
+          
+          console.log('Returning USDFC payment details for MetaMask:', {
+            videoId: req.params.id,
+            amount: video.price + ' USDFC',
+            creator: creatorAddress,
+            contract: filecoinPayService.getContractInfo()?.address,
+            transaction
+          });
+          
+          return res.json({
+            success: true,
+            transaction,
+            gasCost,
+            videoPrice: video.price,
+            creatorAddress,
+            contractAddress: filecoinPayService.getContractInfo()?.address,
+            paymentToken: 'USDFC',
+            tokenAddress: '0x80b98d3aa09ffff255c3ba4a241111ff1262f045',
+            message: 'Payment will be processed via USDFC token transfer'
+          });
+        } catch (txError: any) {
+          console.error("Transaction creation error:", txError);
+          return res.status(500).json({ 
+            error: "Failed to create payment transaction",
+            details: txError.message 
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Purchase error:", error);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ 
+        error: "Internal server error",
+        details: error.message 
+      });
     }
   });
 
