@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
-import { CheckCircle2, Circle, Loader2, Wallet, Shield, Upload } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2, Wallet, Shield, Upload, AlertTriangle } from 'lucide-react';
 import { useSynapsePayment } from '@/hooks/useSynapsePayment';
 import { ethers } from 'ethers';
 
