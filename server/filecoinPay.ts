@@ -56,7 +56,6 @@ export class FilecoinPayService {
         deployed: true
       };
       console.log('USDFC contract initialized:', this.contractInfo.address);
-      console.log('Creator payments will go to:', process.env.CREATOR_WALLET_ADDRESS);
     } catch (error) {
       console.error('Failed to initialize USDFC contract:', error);
     }
@@ -67,6 +66,7 @@ export class FilecoinPayService {
       if (process.env.DEPLOYER_PRIVATE_KEY) {
         this.creatorWallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, this.provider);
         console.log('Creator wallet initialized:', this.creatorWallet.address);
+        console.log('This address will be used for receiving payments');
       }
     } catch (error) {
       console.error('Failed to initialize creator wallet:', error);
@@ -302,31 +302,52 @@ export class FilecoinPayService {
    * Create USDFC payment transaction for MetaMask
    */
   createPaymentTransaction(details: PaymentDetails) {
+    console.log('createPaymentTransaction called with:', details);
+    console.log('contractInfo status:', {
+      exists: !!this.contractInfo,
+      address: this.contractInfo?.address,
+      deployed: this.contractInfo?.deployed
+    });
+    
     if (!this.contractInfo) {
+      console.error('ERROR: contractInfo is null!');
       throw new Error('USDFC contract not initialized');
     }
 
-    // Convert USD amount to USDFC tokens (6 decimals)
-    const usdcDecimals = 6;
-    const amountInTokens = ethers.parseUnits(details.amount, usdcDecimals);
-    const contract = new ethers.Contract(
-      this.contractInfo.address,
-      this.contractInfo.abi,
-      this.provider
-    );
+    try {
+      // Convert USD amount to USDFC tokens (6 decimals)
+      const usdcDecimals = 6;
+      console.log('Converting amount:', details.amount, 'with decimals:', usdcDecimals);
+      const amountInTokens = ethers.parseUnits(details.amount, usdcDecimals);
+      console.log('Amount in tokens:', amountInTokens.toString());
+      
+      const contract = new ethers.Contract(
+        this.contractInfo.address,
+        this.contractInfo.abi,
+        this.provider
+      );
+      console.log('Contract created successfully');
 
-    // Create transaction data for USDFC transfer to creator
-    const txData = contract.interface.encodeFunctionData('transfer', [
-      details.recipient,
-      amountInTokens
-    ]);
+      // Create transaction data for USDFC transfer to creator
+      const txData = contract.interface.encodeFunctionData('transfer', [
+        details.recipient,
+        amountInTokens
+      ]);
+      console.log('Transaction data encoded successfully');
 
-    return {
-      to: this.contractInfo.address,
-      value: '0x0', // No ETH value needed for token transfer
-      data: txData,
-      gasLimit: '0x186A0' // 100000 in hex for ERC20 transfer
-    };
+      const transaction = {
+        to: this.contractInfo.address,
+        value: '0x0', // No ETH value needed for token transfer
+        data: txData,
+        gasLimit: '0x186A0' // 100000 in hex for ERC20 transfer
+      };
+      
+      console.log('Transaction created:', transaction);
+      return transaction;
+    } catch (error) {
+      console.error('Error in createPaymentTransaction:', error);
+      throw error;
+    }
   }
 
   /**
@@ -340,7 +361,18 @@ export class FilecoinPayService {
    * Get creator wallet address
    */
   getCreatorAddress(): string | null {
-    return process.env.CREATOR_WALLET_ADDRESS || this.creatorWallet?.address || null;
+    // Prefer environment variable if it's a valid Ethereum address
+    const envAddress = process.env.CREATOR_WALLET_ADDRESS;
+    if (envAddress && ethers.isAddress(envAddress)) {
+      return envAddress;
+    }
+    
+    // Fall back to initialized creator wallet
+    if (this.creatorWallet?.address) {
+      return this.creatorWallet.address;
+    }
+    
+    return null;
   }
 }
 
