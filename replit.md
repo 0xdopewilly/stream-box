@@ -7,6 +7,11 @@ StreamBox is a decentralized video streaming platform that empowers creators wit
 ## Recent Changes
 
 ### October 5, 2025
+- **Payment Transaction Fix**: Fixed "Failed to create payment transaction" error
+  - Root cause: CREATOR_WALLET_ADDRESS environment variable contained invalid hash instead of Ethereum address
+  - Solution: Added address validation in `getCreatorAddress()` to check if address is valid
+  - Now falls back to properly initialized creator wallet (0x2D3AfFD88f17ba3Bf895E23c820f646b69F7D3cb)
+  - Watch Now button now successfully creates USDFC payment transactions
 - **Video Duration Extraction**: Added automatic video duration extraction from uploaded files
   - New "Extract Duration" button allows users to select a video file and extract its metadata
   - Duration is displayed in MM:SS format in the upload UI
@@ -16,7 +21,6 @@ StreamBox is a decentralized video streaming platform that empowers creators wit
   - Added comprehensive console logging for payment debugging
   - Verified MetaMask wallet connection flow works correctly
   - Proper error handling when MetaMask is not installed
-- **Error Handling**: Improved payment setup error messages with user-friendly guidance
 
 ### October 3, 2025
 - **Synapse SDK Payment Integration**
