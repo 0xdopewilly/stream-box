@@ -4,17 +4,30 @@
 
 StreamBox is a decentralized video streaming platform that empowers creators with tamper-proof storage and direct monetization capabilities. Built with modern web technologies, the platform leverages Filecoin for decentralized storage, providing content verification and creator-owned infrastructure. Users can upload, stream, and monetize video content through various pricing models including free content, pay-per-view, and subscription-based access.
 
-## Recent Changes (October 3, 2025)
+## Recent Changes
 
-### Synapse SDK Payment Integration
-- **Added Payment Setup UI**: Implemented three-step payment flow (Deposit USDFC → Approve Service → Upload Ready)
-- **Backend Payment APIs**: Created `/api/synapse/deposit`, `/api/synapse/approve`, `/api/synapse/preflight`, `/api/synapse/balance` endpoints
-- **Payment Hook**: Added `useSynapsePayment` hook with detailed error logging for debugging
-- **Known Issue**: Synapse SDK v1.x has hardcoded incorrect USDFC contract address (`0xb3042734...cDf0`) that doesn't exist on Calibration network
-  - **Correct Address**: `0x80b98d3aa09ffff255c3ba4a241111ff1262f045`
-  - **Workaround**: Added "Skip Payment Setup" button to proceed directly to upload
-  - **Get Test USDFC**: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc
-- **Payment Flow**: Currently processes transactions via backend creator wallet (0x2D3AfFD88f17ba3Bf895E23c820f646b69F7D3cb)
+### October 5, 2025
+- **Video Duration Extraction**: Added automatic video duration extraction from uploaded files
+  - New "Extract Duration" button allows users to select a video file and extract its metadata
+  - Duration is displayed in MM:SS format in the upload UI
+  - Duration is now properly sent to backend (previously was randomly generated)
+  - Upload functionality maintained via ObjectUploader component
+- **Payment Flow Improvements**: Enhanced Watch Now button with detailed logging
+  - Added comprehensive console logging for payment debugging
+  - Verified MetaMask wallet connection flow works correctly
+  - Proper error handling when MetaMask is not installed
+- **Error Handling**: Improved payment setup error messages with user-friendly guidance
+
+### October 3, 2025
+- **Synapse SDK Payment Integration**
+  - Added Payment Setup UI with three-step flow (Deposit USDFC → Approve Service → Upload Ready)
+  - Backend Payment APIs: `/api/synapse/deposit`, `/api/synapse/approve`, `/api/synapse/preflight`, `/api/synapse/balance`
+  - `useSynapsePayment` hook with detailed error logging
+  - **Known Issue**: Synapse SDK v1.x has hardcoded incorrect USDFC contract (`0xb3042734...cDf0`)
+    - Correct Address: `0x80b98d3aa09ffff255c3ba4a241111ff1262f045`
+    - Workaround: "Skip Payment Setup" button to proceed directly to upload
+    - Get Test USDFC: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc
+  - Payment Flow processes via backend creator wallet (0x2D3AfFD88f17ba3Bf895E23c820f646b69F7D3cb)
 
 ## User Preferences
 
