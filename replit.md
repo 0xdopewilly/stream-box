@@ -7,6 +7,11 @@ StreamBox is a decentralized video streaming platform that empowers creators wit
 ## Recent Changes
 
 ### October 5, 2025
+- **MetaMask USDFC Display Fix**: Fixed MetaMask showing "0 tFIL" instead of USDFC token amount
+  - Added automatic USDFC token addition to MetaMask via wallet_watchAsset
+  - When Watch Now is clicked, MetaMask will prompt to add USDFC token
+  - Once token is added, MetaMask properly displays "Transfer X USDFC" instead of "0 tFIL"
+  - Added detailed console logging and user notifications about payment process
 - **Payment Transaction Fix**: Fixed "Failed to create payment transaction" error
   - Root cause: CREATOR_WALLET_ADDRESS environment variable contained invalid hash instead of Ethereum address
   - Solution: Added address validation in `getCreatorAddress()` to check if address is valid
