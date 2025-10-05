@@ -34,58 +34,18 @@ const FILECOIN_CALIBRATION = {
 };
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletState>(() => {
-    // Try to restore wallet state from localStorage
-    if (typeof window !== 'undefined') {
-      const savedWallet = localStorage.getItem('streambox_wallet');
-      if (savedWallet) {
-        try {
-          const parsed = JSON.parse(savedWallet);
-          // Never restore isConnecting state - it should always start as false
-          return {
-            ...parsed,
-            isConnecting: false,
-          };
-        } catch (e) {
-          console.error('Failed to parse saved wallet state:', e);
-        }
-      }
-    }
-    return {
-      isConnected: false,
-      address: null,
-      isConnecting: false,
-      balance: null,
-      chainId: null,
-    };
+  const [wallet, setWallet] = useState<WalletState>({
+    isConnected: false,
+    address: null,
+    isConnecting: false,
+    balance: null,
+    chainId: null,
   });
 
-  // Clear any stuck connecting state on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined' && wallet.isConnecting) {
-      setWallet(prev => ({ ...prev, isConnecting: false }));
-    }
-  }, []);
-
-  // Save wallet state to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Never save isConnecting state
-      const stateToSave = { ...wallet, isConnecting: false };
-      localStorage.setItem('streambox_wallet', JSON.stringify(stateToSave));
-    }
-  }, [wallet]);
-
-  // Check for existing connection on page load only if user didn't manually disconnect
+  // Check for existing MetaMask connection on mount
   useEffect(() => {
     const checkExistingConnection = async () => {
       if (typeof window !== 'undefined' && (window as any).ethereum && !wallet.isConnected) {
-        // Check if user manually disconnected
-        const wasManuallyDisconnected = localStorage.getItem('streambox_wallet_disconnected');
-        if (wasManuallyDisconnected === 'true') {
-          return; // Don't auto-reconnect if user manually disconnected
-        }
-
         try {
           const ethereum = (window as any).ethereum;
           const accounts = await ethereum.request({ method: 'eth_accounts' });
@@ -94,14 +54,13 @@ export function useWallet() {
             const chainId = await ethereum.request({ method: 'eth_chainId' });
             const balance = await getBalance(accounts[0]);
             
-            const newWalletState = {
+            setWallet({
               isConnected: true,
               address: accounts[0],
               isConnecting: false,
               balance,
               chainId,
-            };
-            setWallet(newWalletState);
+            });
           }
         } catch (error) {
           console.error('Failed to check existing connection:', error);
@@ -110,7 +69,7 @@ export function useWallet() {
     };
 
     checkExistingConnection();
-  }, []); // Remove wallet.isConnected dependency to avoid infinite loops
+  }, []);
 
   const switchToFilecoin = async () => {
     const ethereum = (window as any).ethereum;
@@ -193,19 +152,13 @@ export function useWallet() {
         // Get balance
         const balance = await getBalance(accounts[0]);
 
-        const newWalletState = {
+        setWallet({
           isConnected: true,
           address: accounts[0],
           isConnecting: false,
           balance,
           chainId,
-        };
-        setWallet(newWalletState);
-        
-        // Clear the manual disconnect flag when user connects
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('streambox_wallet_disconnected');
-        }
+        });
 
         // Listen for account changes
         ethereum.on('accountsChanged', (newAccounts: string[]) => {
@@ -252,20 +205,13 @@ export function useWallet() {
   }, []);
 
   const disconnectWallet = useCallback(() => {
-    const disconnectedState = {
+    setWallet({
       isConnected: false,
       address: null,
       isConnecting: false,
       balance: null,
       chainId: null,
-    };
-    setWallet(disconnectedState);
-    
-    // Clear localStorage and mark as manually disconnected
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('streambox_wallet');
-      localStorage.setItem('streambox_wallet_disconnected', 'true');
-    }
+    });
   }, []);
 
   const shortAddress = wallet.address 
