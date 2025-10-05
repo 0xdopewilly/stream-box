@@ -57,7 +57,8 @@ export function useFilecoinPay() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get transaction details');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to get transaction details');
       }
 
       const { transaction, gasCost, videoPrice, creatorAddress, contractAddress, paymentToken, tokenAddress, message } = await response.json();
@@ -83,16 +84,50 @@ export function useFilecoinPay() {
         throw new Error("MetaMask not available");
       }
 
-      // Check if user has sufficient balance (price + gas)
+      // Check if user has sufficient FIL balance for gas
       const balance = await ethereum.request({ method: 'eth_getBalance', params: [address, 'latest'] });
       const balanceWei = BigInt(balance);
-      const transactionValueWei = BigInt(transaction.value);
       const gasCostWei = ethers.parseEther(gasCost);
-      const totalCostWei = transactionValueWei + gasCostWei;
       
-      // For USDFC token payments, we only need FIL for gas
       if (balanceWei < gasCostWei) {
         throw new Error(`Insufficient FIL for gas. Need ${ethers.formatEther(gasCostWei)} FIL for transaction fees`);
+      }
+
+      // Check USDFC token balance
+      const usdcDecimals = 6;
+      const requiredAmount = ethers.parseUnits(videoPrice, usdcDecimals);
+      
+      try {
+        // Call balanceOf function on USDFC contract
+        const balanceOfData = ethers.concat([
+          '0x70a08231', // balanceOf function selector
+          ethers.zeroPadValue(address, 32) // address parameter padded to 32 bytes
+        ]);
+        
+        const usdcBalance = await ethereum.request({
+          method: 'eth_call',
+          params: [{
+            to: tokenAddress,
+            data: balanceOfData
+          }, 'latest']
+        });
+        
+        const usdcBalanceBigInt = BigInt(usdcBalance);
+        const requiredAmountBigInt = BigInt(requiredAmount);
+        
+        if (usdcBalanceBigInt < requiredAmountBigInt) {
+          const balanceFormatted = ethers.formatUnits(usdcBalanceBigInt.toString(), usdcDecimals);
+          throw new Error(
+            `Insufficient USDFC tokens. You have ${balanceFormatted} USDFC but need ${videoPrice} USDFC. ` +
+            `Get test USDFC from: https://forest-explorer.chainsafe.dev/faucet/calibnet_usdfc`
+          );
+        }
+      } catch (balanceError: any) {
+        // If balance check fails, log it but continue (might be network issue)
+        console.warn('Could not check USDFC balance:', balanceError.message);
+        if (balanceError.message?.includes('Insufficient USDFC')) {
+          throw balanceError; // Re-throw if it's our insufficient balance error
+        }
       }
 
       toast({

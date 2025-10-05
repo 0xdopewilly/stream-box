@@ -122,20 +122,31 @@ export default function VideoPage() {
         purchaseType: 'single'
       });
 
-      if (paymentResult.success && paymentResult.transactionHash) {
-        // Create purchase record with real transaction hash
-        const purchase = {
-          userId: "user1", // In real app, get from wallet/auth
-          videoId: video.id,
-          amount: video.price,
-          transactionHash: paymentResult.transactionHash,
-        };
+      if (paymentResult.success) {
+        if (paymentResult.transactionHash) {
+          // Create purchase record with real transaction hash
+          const purchase = {
+            userId: "user1", // In real app, get from wallet/auth
+            videoId: video.id,
+            amount: video.price,
+            transactionHash: paymentResult.transactionHash,
+          };
 
-        purchaseMutation.mutate(purchase);
+          purchaseMutation.mutate(purchase);
+        } else {
+          // Payment was successful but no transaction hash (unusual case)
+          console.warn('Payment successful but no transaction hash received:', paymentResult);
+          toast({
+            title: "Payment processing",
+            description: "Your payment is being processed. Please check back in a moment.",
+          });
+        }
       } else {
+        // Payment failed
+        const errorMsg = paymentResult.error || "The payment could not be processed. Please try again.";
         toast({
           title: "Payment failed",
-          description: "The payment could not be processed. Please try again.",
+          description: errorMsg,
           variant: "destructive",
         });
       }
